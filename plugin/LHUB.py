@@ -7,7 +7,6 @@
 # <bitbar.desc>Various helpful actions for LogicHub engineers</bitbar.desc>
 # <bitbar.dependencies>See readme.md</bitbar.dependencies>
 
-# ToDo Build all icons at 36x36 with a resolution of 144 DPI
 import base64
 import configobj
 import copy
@@ -428,11 +427,6 @@ class BitBar:
         self.make_action("Trim Text in Clipboard", self.text_trim_string)
         self.make_action("Remove Text Formatting", self.text_remove_formatting)
 
-        # ToDo Add a new section for LogicHub Maintenance and Troubleshooting
-        # ToDo Add actions for various checks for troubleshooting and maintenance, starting with verifying that Stepped Navigation is disabled
-
-        # ToDo Review this script and look for any actions which might be valuable to split out into separate scripts in the supporting_files directory
-
     def add_menu_section(self, label, menu_depth=0):
         """
         Print a divider line as needed by BitBar, then print a label for the new section
@@ -534,8 +528,7 @@ class BitBar:
         sys.exit(1)
 
     @staticmethod
-    def read_clipboard(trim_input=False):
-        # ToDo Eventually make trim_input enabled by default after verifying every use
+    def read_clipboard(trim_input=True):
         clip = clipboard.paste()
         if trim_input:
             clip = clip.strip()
@@ -626,7 +619,7 @@ class BitBar:
 
         :return:
         """
-        _input = BitBar.read_clipboard(trim_input=True)
+        _input = BitBar.read_clipboard()
         try:
             _output = BitBar.pretty_print_sql(_input, **kwargs)
         except Exception as err:
@@ -793,35 +786,6 @@ check_recent_user_activity
         :return:
         """
         self.write_clipboard(r"""lh_open_docker_image_by_product_name() { search_str=$1; [[ -z $search_str ]] && echo && read -p "Type part of the product name: " -r search_str; [[ -z $search_str ]] && echo "No search string provided; aborted" && return; mapfile -t newest < <(docker ps|grep -iP "lhub-managed-integrations.logichub.[^.\s]*$search_str"|head -n1|sed -E 's/ +/\n/g'); [[ -z ${newest[0]} ]] && echo "No matching docker image found" && return; echo; echo "${newest[-1]}"|grep -Po 'logichub\.\K[^.]+'; printf 'Image ID: %s\nImage Name: %s\n\n' ${newest[0]} ${newest[1]}; docker exec -it "${newest[0]}" /bin/bash; }; lh_open_docker_image_by_product_name """)
-
-    # ToDo finish what I started regarding adding functions to .bashrc
-    # ToDo create an alternate version of open_integration_container_by_product_name to create or update a permanent on in .bashrc
-    """
-
-
-
-    ############################
-    ##### ToDo Revisit this ####
-    ############################
-
-
-    # https://unix.stackexchange.com/questions/106601/how-to-add-a-function-to-bash-profile-profile-bashrc-in-shell
-    # Add to .bash_profile to make bash load .bashrc so functions load in shells automatically
-    # looks like the first part isn't actually needed, but .bash_profile is "often not loaded when logging in graphically"
-    . ~/.profile
-    case $- in *i*) . ~/.bashrc;; esac
-
-    # Ensure that .profile exists and that necessary lines are present in .bash_profile
-    if [[ ! -f ~/.profile ]]; then touch ~/.profile; fi; if ! grep -q '^case' ~/.bash_profile; then cp -P ~/.bash_profile ~/.bash_profile.$(date +'%Y%m%d_%H%M%S').bak; printf "\n# Load functions from .bashrc\n. ~/.profile\ncase \$- in *i*) . ~/.bashrc;; esac\n" >> ~/.bash_profile; fi
-
-    # Clean up the old version if there is one
-    cp -P ~/.bashrc ~/.bashrc.$(date +'%Y%m%d_%H%M%S').bak
-    sed -i.bak -E '/[ \t]*(function[ \t]*)?\b(lh_open_docker_image_by_product_name)\b.*?\{/d' ~/.bashrc
-
-    # Substitute ' with '"'"', and otherwise it appears it can go straight in
-    printf '%s\n' 'function lh_open_docker_image_by_product_name() { read -p "Type part of the product name: " -r search_str; [[ -z $search_str ]] && echo "No search string provided; aborted" && return; mapfile -t newest < <(docker ps|grep -iP "lhub-managed-integrations.logichub.[^.\s]*$search_str"|head -n1|sed -E '"'"'s/ +/\n/g'"'"'); [[ -z ${newest[0]} ]] && echo "No matching docker image found" && return; echo; echo "${newest[-1]}"|grep -Po '"'"'logichub\.\K[^.]+'"'"'; printf '"'"'Image ID: %s\nImage Name: %s\n\n'"'"' ${newest[0]} ${newest[1]}; docker exec -it "${newest[0]}" /bin/bash; }' >> ~/.bashrc
-
-    """
 
     ############################################################################
     # LogicHub -> Shell: Service Container
@@ -1215,7 +1179,7 @@ check_recent_user_activity
 
         :return: list, ordered dict, or None
         """
-        _input = BitBar.read_clipboard(True)
+        _input = BitBar.read_clipboard()
         try:
             _output = json.loads(_input, strict=False)
         except ValueError:
@@ -1281,7 +1245,7 @@ check_recent_user_activity
         :param override_clipboard:
         :return:
         """
-        _input = override_clipboard if override_clipboard else BitBar.read_clipboard(True)
+        _input = override_clipboard if override_clipboard else BitBar.read_clipboard()
         url = url.replace(r'{}', _input)
         if open_url is True:
             subprocess.call(["open", url])
@@ -1290,7 +1254,7 @@ check_recent_user_activity
 
     @staticmethod
     def add_default_jira_project_when_needed():
-        jira_issue = BitBar.read_clipboard(True).upper()
+        jira_issue = BitBar.read_clipboard().upper()
         if re.match(r"^\d+$", jira_issue):
             jira_issue = f"LHUB-{jira_issue}"
         return jira_issue
@@ -1433,7 +1397,7 @@ check_recent_user_activity
 
         :return:
         """
-        self.write_clipboard(self.read_clipboard().upper())
+        self.write_clipboard(self.read_clipboard(trim_input=False).upper())
 
     def text_make_lowercase(self):
         """
@@ -1441,7 +1405,7 @@ check_recent_user_activity
 
         :return:
         """
-        self.write_clipboard(self.read_clipboard().lower())
+        self.write_clipboard(self.read_clipboard(trim_input=False).lower())
 
     def text_trim_string(self):
         """
@@ -1449,7 +1413,7 @@ check_recent_user_activity
 
         :return:
         """
-        self.write_clipboard(self.read_clipboard().strip())
+        self.write_clipboard(self.read_clipboard(trim_input=False).strip())
 
     def text_remove_formatting(self):
         """
@@ -1458,7 +1422,7 @@ check_recent_user_activity
 
         :return:
         """
-        self.write_clipboard(self.read_clipboard())
+        self.write_clipboard(self.read_clipboard(trim_input=False))
 
 
 def main():
