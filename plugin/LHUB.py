@@ -280,12 +280,6 @@ class BitBar:
         # dict to store all of the actions
         self.action_list = {}
 
-        # ToDo Add something to find the location of "BitBar.app" from running processes,
-        #   and use that to check the version of BitBar
-        #   /Applications/BitBar.app/Contents/Info.plist
-        #     <key>CFBundleVersion</key>
-        #     <string>1.9.2</string>
-
         # ------------ Menu Section: LogicHub ------------ #
 
         self.add_menu_section("LogicHub | image={} size=20 color=blue".format(self.image_to_base64_string("bitbar_menu_logichub.ico")))
@@ -426,6 +420,16 @@ class BitBar:
         self.make_action("Text to Lowercase", self.text_make_lowercase)
         self.make_action("Trim Text in Clipboard", self.text_trim_string)
         self.make_action("Remove Text Formatting", self.text_remove_formatting)
+
+        # Lastly, attempt to get the BitBar version and print it as an FYI
+        try:
+            with open("/Applications/BitBar.app/Contents/Info.plist", "r") as app_file:
+                _app_info = app_file.read()
+                bitbar_version = re.findall('<key>CFBundleVersion<.*\s+<string>(.*?)</string>', _app_info)[0]
+                if bitbar_version:
+                    self.print_in_bitbar_menu(f"---\nBitBar version: {bitbar_version}")
+        except:
+            pass
 
     def add_menu_section(self, label, menu_depth=0):
         """
