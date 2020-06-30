@@ -9,33 +9,23 @@
 
 import base64
 import configobj
-import copy
 import json
 import os
 import re
 import sqlparse
 import subprocess
 import shlex
-from numbers import Number
 import sys
 from collections import namedtuple
+from dataclasses import dataclass
 
 import clipboard
 
 # Global static variables
 user_config_file = "logichub_tools.ini"
-default_config_file = "logichub_internal_defaults.ini"
-
-# Previously a configurable variable, but so far it's never changed, so making static for now.
-default_loopback_interface = "lo0"
 
 # Will be updated if enabled via the config file
 debug_enabled = False
-
-
-def print_debug(msg):
-    if debug_enabled:
-        print(f"[DEBUG] {msg}")
 
 
 def _validate_command(cmd: str or bytes or list or tuple):
@@ -113,14 +103,11 @@ def do_prompt_for_sudo():
 
 def convert_boolean(_var):
     if type(_var) is str:
-        try:
-            _var2 = _var.strip().lower()
-            if _var2 in ["yes", "true"]:
-                return True
-            elif _var2 in ["no", "false"]:
-                return False
-        except:
-            pass
+        _var2 = _var.strip().lower()
+        if _var2 in ["yes", "true"]:
+            return True
+        elif _var2 in ["no", "false"]:
+            return False
     return _var
 
 
@@ -137,111 +124,134 @@ def sort_dict(_var):
     return new_dict
 
 
-def get_user_config(**kwargs):
-    """
-    The keys in kwargs must be config sections, and the values must be dicts, wherein those dicts will be treated as
-    variables and their intended default values
-
-    :param kwargs:
-    :return:
-    """
-    # Find the path to the home directory
-    home_dir = os.environ.get("HOME")
-    # initialize a config obj for the user's logichub_tools.ini file
-    user_config_file_path = os.path.join(home_dir, user_config_file)
-    user_settings = configobj.ConfigObj(user_config_file_path)
-
-    # initialize a config obj for default config from logichub_internal_defaults.ini
-    default_config_file_path = os.path.join(user_settings["main"]["bitbar_repo_path"], default_config_file)
-    defaults = configobj.ConfigObj(default_config_file_path)
-
-    # Set some defaults which may not be included in logichub_internal_defaults.ini
-    # These are defaults that are not specific to BitBar and can later be reused in a master function
-    if not defaults["main"].get("local_user"):
-        defaults["main"]["local_user"] = os.environ.get("USER")
-
-    if not defaults["main"].get("default_ssh_user"):
-        defaults["main"]["default_ssh_user"] = os.environ.get("USER")
-
-    defaults["main"].setdefault("home_dir", home_dir)
-    # Return either "Dark" or "Light" for the OS theme
-    os_theme = os.popen('defaults read -g AppleInterfaceStyle 2> /dev/null').read().strip() or "Light"
-    defaults["main"].setdefault("os_theme", os_theme)
-
-    # If kwargs were provided, loop through them and treat each key as the config section name and the value is a dict,
-    # wherein each dict contains variables and their default values for the given section
-    for _kwarg_key in kwargs.keys():
-        if _kwarg_key not in defaults:
-            defaults[_kwarg_key] = kwargs[_kwarg_key]
-        else:
-            for _kwarg_var_name in kwargs[_kwarg_key].keys():
-                defaults[_kwarg_key].setdefault(_kwarg_var_name, kwargs[_kwarg_key][_kwarg_var_name])
-
-    # Create a dict from default config so that the user's config can be merged into it
-    config_dict = {"main": {}}
-    config_dict.update(defaults)
-
-    # Update the config dict with user's custom config
-    for _key in user_settings:
-        if _key not in config_dict:
-            config_dict[_key] = user_settings[_key]
-        else:
-            config_dict[_key].update(user_settings[_key])
-
-    sorted_config_dict = {"main": sort_dict(config_dict.pop("main"))}
-    sorted_config_dict.update(sort_dict(config_dict))
-
-    return sorted_config_dict
+def print_debug(msg):
+    if debug_enabled:
+        print(f"[DEBUG] {msg}")
 
 
-class UserVariables:
+@dataclass
+class ConfigSection:
+    pass
+
+
+class ConfigMain:
+    def __init__(self, **kwargs):
+        # Path to the BitBar repo. No default here, as this is a required field.
+        self.repo_path = kwargs.get("bitbar_repo_path", None)
+
+        # Local user ID. If not provided, user will be drawn from USER environment variable
+        self.local_user = kwargs.get("local_user", os.environ.get("USER"))
+
+        # Default SSH username. If not provided, user will be drawn from USER environment variable
+        self.ssh_user = kwargs.get("ssh_user", self.local_user)
+
+        # SSH keys are assumed to be located in ~/.ssh unless a full path is provided
+        self.ssh_key = kwargs.get("ssh_key", "id_rsa")
+
+        # Return either "Dark" or "Light" for the OS theme
+        self.os_theme = kwargs.get("os_theme", os.popen('defaults read -g AppleInterfaceStyle 2> /dev/null').read().strip() or "Light")
+
+        self.default_loopback_interface = kwargs.get("default_loopback_interface", "lo0")
+
+
+class ConfigBitBar:
+    def __init__(self, **kwargs):
+        # Define how this plugin should appear in the status bar
+        # Options: logo, text, both, custom
+        self.status_bar_style = kwargs.get("status_bar_style", "logo")
+
+        # Text for the BitBar plugin label (not used if status_bar_style is set to logo)
+        # If status_bar_style is set to "custom", you can specify additional formatting criteria according to BitBar's plugin API
+        self.status_bar_label = kwargs.get("status_bar_label", "LHUB")
+
+        # Choose the logo: small, large, xl
+        self.status_bar_icon_size = kwargs.get("status_bar_icon_size", "large")
+
+        # Override the color of the text in the status bar (ignored if text is disabled by the selected style)
+        self.status_bar_text_color = kwargs.get("status_bar_text_color", "black")
+
+        # Generate a popup notification every time the clipboard gets updated
+        self.clipboard_update_notifications = convert_boolean(kwargs.get("clipboard_update_notifications", False))
+
+        # Show debug output
+        self.debug_output_enabled = convert_boolean(kwargs.get("debug_output_enabled", False))
+
+        # default Jira prefix (project name)
+        self.jira_default_prefix = kwargs.get("jira_default_prefix", "LHUB")
+
+
+class ConfigBitBarNetworking:
+    def __init__(self, **kwargs):
+        self.configs = kwargs
+
+
+# ToDo Finish this new feature
+class ConfigBitBarCustom:
+    def __init__(self, **kwargs):
+        pass
+
+
+class Config:
     def __init__(self):
-        config_defaults = {
-            "main": {},
-            "BitBar": {
-                "logo": ""
-            },
-        }
-        config = get_user_config(**config_defaults)
-        # Make a raw copy for troubleshooting purposes)
-        self.config_raw = copy.deepcopy(config)
-        self.local_user = config["main"]["local_user"]
-        self.dir_user_home = config["main"]["home_dir"]
-        self.dir_internal_tools = config["main"]["bitbar_repo_path"]
-        self.dir_supporting_scripts = os.path.join(self.dir_internal_tools, "scripts")
-        self.os_theme = config["main"]["os_theme"]
-        dark_theme_logos = {
-            "small": "bitbar_status_small.png",
-            "large": "bitbar_status_large_dark.png",
-            "xl": "bitbar_status_xlarge_dark.png",
-        }
-        light_theme_logos = {
-            "small": "bitbar_status_small.png",
-            "large": "bitbar_status_large.png",
-            "xl": "bitbar_status_xlarge.png",
-        }
-        self.image_file_path = config["BitBar"]["image_file_path"] = os.path.join(
-            self.dir_internal_tools,
-            'supporting_files/images'
-        )
-        status_bar_icon_size = config["BitBar"]["status_bar_icon_size"]
-        if self.os_theme == "Dark":
-            self.status_bar_logo = dark_theme_logos[status_bar_icon_size]
-        else:
-            self.status_bar_logo = light_theme_logos[status_bar_icon_size]
-        config["BitBar"]["status_bar_logo"] = self.status_bar_logo
-        self.status_bar_style = config["BitBar"]["status_bar_style"].lower()
-        self.status_bar_label = config["BitBar"]["status_bar_label"]
-        self.status_bar_text_color = config["BitBar"]["status_bar_text_color"]
-        self.clipboard_update_notifications = config["BitBar"].get("clipboard_update_notifications", False)
-        self.debug_enabled = config["BitBar"].get("debug_output_enabled", False)
+        config_sections = ["main", "BitBar", "BitBar_networking", "BitBar_custom"]
 
-        self.default_ssh_key = config["main"]["default_ssh_key"]
+        # initialize a config obj for the user's logichub_tools.ini file
+        self.user_settings_dict = configobj.ConfigObj(os.path.join(os.environ.get("HOME"), user_config_file))
+        if not self.user_settings_dict:
+            print(f"{user_config_file} not found")
+            sys.exit(1)
+        else:
+            for k in config_sections:
+                if k not in self.user_settings_dict:
+                    self.user_settings_dict[k] = {}
+
+        self.main = ConfigMain(**self.user_settings_dict["main"])
+        if not self.main.repo_path:
+            print("bitbar_repo_path not set in logichub_tools.ini")
+            sys.exit(1)
+
+        # ToDo drop these as class variables
+        self.BitBar = ConfigBitBar(**self.user_settings_dict["BitBar"])
+        self.BitBar_networking = ConfigBitBarNetworking(**self.user_settings_dict["BitBar_networking"])
+        self.BitBar_custom = ConfigBitBarCustom(**self.user_settings_dict["BitBar_custom"])
+
+        # Find the path to the home directory
+        self.dir_user_home = os.environ.get("HOME")
+
+        # initialize a config obj for the user's logichub_tools.ini file
+        user_config_file_path = os.path.join(self.dir_user_home, user_config_file)
+        user_settings = configobj.ConfigObj(user_config_file_path)
+
+        self.default_loopback_interface = self.main.default_loopback_interface
+        self.local_user = self.main.local_user
+        self.default_ssh_key = self.main.ssh_key
         if "/" not in self.default_ssh_key:
             self.default_ssh_key = os.path.join(self.dir_user_home, ".ssh", self.default_ssh_key)
 
-        # save the final config for troubleshooting purposes as well
-        self.config = config
+        self.debug_enabled = self.BitBar.debug_output_enabled
+        self.dir_internal_tools = self.main.repo_path
+        self.dir_supporting_scripts = os.path.join(self.dir_internal_tools, "scripts")
+        self.image_file_path = os.path.join(self.dir_internal_tools, 'supporting_files/images')
+
+        logos_by_os_theme = {
+            "Dark": {
+                "small": "bitbar_status_small.png",
+                "large": "bitbar_status_large_dark.png",
+                "xl": "bitbar_status_xlarge_dark.png",
+            },
+            "Light": {
+                "small": "bitbar_status_small.png",
+                "large": "bitbar_status_large.png",
+                "xl": "bitbar_status_xlarge.png",
+            }
+        }
+        self.status_bar_logo = logos_by_os_theme[self.main.os_theme][self.BitBar.status_bar_icon_size]
+
+        self.status_bar_style = self.BitBar.status_bar_style
+        self.status_bar_label = self.BitBar.status_bar_label
+        self.status_bar_text_color = self.BitBar.status_bar_text_color
+        self.clipboard_update_notifications = self.BitBar.clipboard_update_notifications
+        self.jira_default_prefix = self.BitBar.jira_default_prefix
 
 
 class BitBar:
@@ -255,27 +265,18 @@ class BitBar:
         self.script_name = sys.argv[0]
         self.status = ""
         self.bitbar_menu_output = ""
-        self.loopback_interface = default_loopback_interface
 
         self.url_jira = r"https://logichub.atlassian.net/browse/{}"
         self.url_uws = r"https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID={}"
         self.url_nmap = r"https://nmap.org/nsedoc/scripts/{}"
 
-        try:
-            self.variables = UserVariables()
-        except Exception as e:
-            # Handle exceptions more gracefully to make errors more useful
-            if type(e) is KeyError:
-                self.fail_with_exception(f"Either a required section or key was not found or a parameter contains an invalid value: {e}")
-            elif type(e) is FileNotFoundError:
-                self.fail_with_exception(f"{user_config_file} not found in home directory")
-            else:
-                self.fail_with_exception(e)
+        self.config = Config()
 
-        if self.variables.debug_enabled:
+        if self.config.debug_enabled:
             global debug_enabled
-            debug_enabled = self.variables.debug_enabled
+            debug_enabled = self.config.debug_enabled
         self.set_status_bar_display()
+        self.loopback_interface = self.config.default_loopback_interface
 
         # dict to store all of the actions
         self.action_list = {}
@@ -283,7 +284,6 @@ class BitBar:
         # ------------ Menu Section: LogicHub ------------ #
 
         self.add_menu_section("LogicHub | image={} size=20 color=blue".format(self.image_to_base64_string("bitbar_menu_logichub.ico")))
-
         self.print_in_bitbar_menu("LQL & Web UI")
         self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql)
         self.make_action("(Beta) Pretty Print SQL options", action=None, alternate=True)
@@ -474,7 +474,7 @@ class BitBar:
         self.displayNotificationError(msg)
 
     def image_to_base64_string(self, file_name):
-        file_path = os.path.join(self.variables.image_file_path, file_name)
+        file_path = os.path.join(self.config.image_file_path, file_name)
         with open(file_path, "rb") as image_file:
             image_bytes = image_file.read()
             image_b64 = base64.b64encode(image_bytes)
@@ -482,15 +482,15 @@ class BitBar:
 
     def set_status_bar_display(self):
         # Ignore status_bar_label is status_bar_style is only the logo
-        status_bar_label = "" if self.variables.status_bar_style == "logo" else self.variables.status_bar_label
+        status_bar_label = "" if self.config.status_bar_style == "logo" else self.config.status_bar_label
         # If the status bar style is "custom," then whatever is passed in status_bar_label is the final product
-        if self.variables.status_bar_style != "custom":
+        if self.config.status_bar_style != "custom":
             status_bar_label += "|"
-            if self.variables.status_bar_style in ["logo", "both"]:
-                logo = self.image_to_base64_string(self.variables.status_bar_logo)
+            if self.config.status_bar_style in ["logo", "both"]:
+                logo = self.image_to_base64_string(self.config.status_bar_logo)
                 status_bar_label += f" image={logo}"
-            if self.variables.status_bar_style in ["text", "both"]:
-                status_bar_label += f" color={self.variables.status_bar_text_color}"
+            if self.config.status_bar_style in ["text", "both"]:
+                status_bar_label += f" color={self.config.status_bar_text_color}"
         self.status = status_bar_label
 
         # Set status bar text and/or logo
@@ -540,7 +540,7 @@ class BitBar:
 
     def write_clipboard(self, text):
         clipboard.copy(text)
-        if self.variables.clipboard_update_notifications:
+        if self.config.clipboard_update_notifications:
             self.displayNotification("Clipboard updated")
 
     def copy_file_contents_to_clipboard(self, file_path, file_name=None):
@@ -736,7 +736,7 @@ class BitBar:
     ############################################################################
     # LogicHub -> Shell: Host
     def shell_lh_host_fix_add_self_to_docker_group(self):
-        self.write_clipboard(f'sudo usermod -a -G docker {self.variables.local_user}')
+        self.write_clipboard(f'sudo usermod -a -G docker {self.config.local_user}')
 
     def shell_lh_host_path_to_service_container_volume(self):
         self.write_clipboard(f'/var/lib/docker/volumes/logichub_data/_data/service/')
@@ -866,7 +866,7 @@ check_recent_user_activity
 
         :return:
         """
-        self.copy_file_contents_to_clipboard(self.variables.dir_supporting_scripts, "upgrade_prep-verify.sh")
+        self.copy_file_contents_to_clipboard(self.config.dir_supporting_scripts, "upgrade_prep-verify.sh")
 
     def logichub_upgrade_prep_backups(self):
         """
@@ -874,7 +874,7 @@ check_recent_user_activity
 
         :return:
         """
-        self.copy_file_contents_to_clipboard(self.variables.dir_supporting_scripts, "upgrade_prep-backups.sh")
+        self.copy_file_contents_to_clipboard(self.config.dir_supporting_scripts, "upgrade_prep-backups.sh")
 
     def logichub_upgrade_command_from_clipboard(self):
         """
@@ -920,13 +920,13 @@ check_recent_user_activity
     ############################################################################
 
     def check_for_custom_networking_configs(self):
-        if self.variables.config.get("BitBar.networking"):
-            for _var in self.variables.config["BitBar.networking"]:
-                if isinstance(self.variables.config["BitBar.networking"][_var], dict):
-                    if self.variables.config["BitBar.networking"][_var].get("type") == "ssh":
-                        self.ssh_tunnel_configs.append((self.variables.config["BitBar.networking"][_var].get("name"), f"ssh_tunnel_custom_{_var}"))
-                    elif self.variables.config["BitBar.networking"][_var].get("type") == "redirect":
-                        self.port_redirect_configs.append((self.variables.config["BitBar.networking"][_var].get("name"), f"port_redirect_custom_{_var}"))
+        if self.config.BitBar_networking:
+            for _var in self.config.BitBar_networking.configs:
+                if isinstance(self.config.BitBar_networking.configs[_var], dict):
+                    if self.config.BitBar_networking.configs[_var].get("type") == "ssh":
+                        self.ssh_tunnel_configs.append((self.config.BitBar_networking.configs[_var].get("name"), f"ssh_tunnel_custom_{_var}"))
+                    elif self.config.BitBar_networking.configs[_var].get("type") == "redirect":
+                        self.port_redirect_configs.append((self.config.BitBar_networking.configs[_var].get("name"), f"port_redirect_custom_{_var}"))
 
     ############################################################################
     # Networking -> Reset
@@ -1046,7 +1046,7 @@ check_recent_user_activity
 
         # """ Custom port redirection based on entries in logichub_tools.ini """
         config_name = re.sub('^port_redirect_custom_', '', sys.argv[1])
-        config_dict = self.variables.config["BitBar.networking"].get(config_name)
+        config_dict = self.config.BitBar_networking.configs.get(config_name)
         if not config_dict:
             self.displayNotificationError(f"Port redirect config [{config_name}] not found", print_stderr=True)
 
@@ -1108,8 +1108,8 @@ check_recent_user_activity
         local_port = config_dict.get("local_port") or remote_port
         ssh_server_address = config_dict.get("ssh_server")
         ssh_server_port = config_dict.get("ssh_port") or 22
-        ssh_user = config_dict.get("ssh_user") or self.variables.local_user
-        ssh_key = config_dict.get("ssh_key") or self.variables.default_ssh_key
+        ssh_user = config_dict.get("ssh_user") or self.config.local_user
+        ssh_key = config_dict.get("ssh_key") or self.config.default_ssh_key
         ssh_options = config_dict.get("ssh_options", "").strip()
 
         # Ensure that required parameters are present
@@ -1162,9 +1162,9 @@ check_recent_user_activity
     def ssh_tunnel_custom(self):
         """ Custom SSH tunnel based on entries in logichub_tools.ini """
         config_name = re.sub('^ssh_tunnel_custom_', '', sys.argv[1])
-        if not self.variables.config["BitBar.networking"].get(config_name):
+        if not self.config.BitBar_networking.configs.get(config_name):
             self.displayNotificationError(f"SSH tunnel config [{config_name}] not found", print_stderr=True)
-        tunnel_config = self.variables.config["BitBar.networking"][config_name]
+        tunnel_config = self.config.BitBar_networking.configs[config_name]
         self.do_execute_ssh_tunnel(tunnel_config)
 
     ############################################################################
@@ -1256,11 +1256,11 @@ check_recent_user_activity
         else:
             self.write_clipboard(url)
 
-    @staticmethod
-    def add_default_jira_project_when_needed():
+    def add_default_jira_project_when_needed(self):
+        default_prefix = self.config.jira_default_prefix
         jira_issue = BitBar.read_clipboard().upper()
         if re.match(r"^\d+$", jira_issue):
-            jira_issue = f"LHUB-{jira_issue}"
+            jira_issue = f"{default_prefix}-{jira_issue}"
         return jira_issue
 
     def make_link_jira_and_open(self):
@@ -1269,7 +1269,7 @@ check_recent_user_activity
 
         :return:
         """
-        jira_issue = BitBar.add_default_jira_project_when_needed()
+        jira_issue = self.add_default_jira_project_when_needed()
         self.make_link(self.url_jira, override_clipboard=jira_issue, open_url=True)
 
     def make_link_jira(self):
@@ -1278,7 +1278,7 @@ check_recent_user_activity
 
         :return:
         """
-        jira_issue = BitBar.add_default_jira_project_when_needed()
+        jira_issue = self.add_default_jira_project_when_needed()
         self.make_link(self.url_jira, override_clipboard=jira_issue)
 
     def make_link_uws_and_open(self):
