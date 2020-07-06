@@ -18,6 +18,7 @@ import shlex
 import sys
 from collections import namedtuple
 from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 
 import clipboard
 
@@ -134,65 +135,77 @@ class ConfigSection:
     pass
 
 
+@dataclass_json
+@dataclass
 class ConfigMain:
-    def __init__(self, **kwargs):
-        # Path to the BitBar repo. No default here, as this is a required field.
-        self.repo_path = kwargs.get("bitbar_repo_path", None)
+    # Path to the BitBar repo. No default here, as this is a required field.
+    bitbar_repo_path: str
 
-        # Local user ID. If not provided, user will be drawn from USER environment variable
-        self.local_user = kwargs.get("local_user", os.environ.get("USER"))
+    # Local user ID. If not provided, user will be drawn from USER environment variable
+    local_user: str
 
-        # Default SSH username. If not provided, user will be drawn from USER environment variable
-        self.ssh_user = kwargs.get("ssh_user", self.local_user)
+    # Default SSH username. If not provided, user will be drawn from USER environment variable
+    ssh_user: str
 
-        # SSH keys are assumed to be located in ~/.ssh unless a full path is provided
-        self.ssh_key = kwargs.get("ssh_key", "id_rsa")
+    # SSH keys are assumed to be located in ~/.ssh unless a full path is provided
+    ssh_key: str
 
-        # Return either "Dark" or "Light" for the OS theme
-        self.os_theme = kwargs.get("os_theme", os.popen('defaults read -g AppleInterfaceStyle 2> /dev/null').read().strip() or "Light")
+    # Return either "Dark" or "Light" for the OS theme
+    os_theme: str
 
-        self.default_loopback_interface = kwargs.get("default_loopback_interface", "lo0")
+    default_loopback_interface: str
 
 
+@dataclass_json
+@dataclass
 class ConfigBitBar:
-    def __init__(self, **kwargs):
-        # Define how this plugin should appear in the status bar
-        # Options: logo, text, both, custom
-        self.status_bar_style = kwargs.get("status_bar_style", "logo")
+    # Define how this plugin should appear in the status bar
+    # Options: logo, text, both, custom
+    status_bar_style: str
 
-        # Text for the BitBar plugin label (not used if status_bar_style is set to logo)
-        # If status_bar_style is set to "custom", you can specify additional formatting criteria according to BitBar's plugin API
-        self.status_bar_label = kwargs.get("status_bar_label", "LHUB")
+    # Text for the BitBar plugin label (not used if status_bar_style is set to logo)
+    # If status_bar_style is set to "custom", you can specify additional formatting criteria according to BitBar's plugin API
+    status_bar_label: str
 
-        # Choose the logo: small, large, xl
-        self.status_bar_icon_size = kwargs.get("status_bar_icon_size", "large")
+    # Choose the logo: small, large, xl
+    status_bar_icon_size: str
 
-        # Override the color of the text in the status bar (ignored if text is disabled by the selected style)
-        self.status_bar_text_color = kwargs.get("status_bar_text_color", "black")
+    # Override the color of the text in the status bar (ignored if text is disabled by the selected style)
+    status_bar_text_color: str
 
-        # Generate a popup notification every time the clipboard gets updated
-        self.clipboard_update_notifications = convert_boolean(kwargs.get("clipboard_update_notifications", False))
+    # Generate a popup notification every time the clipboard gets updated
+    clipboard_update_notifications: bool
 
-        # Show debug output
-        self.debug_output_enabled = convert_boolean(kwargs.get("debug_output_enabled", False))
+    # Show debug output
+    debug_output_enabled: bool
 
-        # default Jira prefix (project name)
-        self.jira_default_prefix = kwargs.get("jira_default_prefix", "LHUB")
+    # default Jira prefix (project name)
+    jira_default_prefix: str
 
 
+@dataclass_json
+@dataclass
 class ConfigBitBarNetworking:
-    def __init__(self, **kwargs):
-        self.configs = kwargs
+    configs: dict
 
 
 # ToDo Finish this new feature
+@dataclass_json
+@dataclass
 class ConfigBitBarCustom:
-    def __init__(self, **kwargs):
+    def __post_init__(self):
         pass
 
 
+@dataclass_json
+@dataclass
 class Config:
-    def __init__(self):
+    main: ConfigMain = None
+    BitBar: ConfigBitBar = None
+    BitBar_networking: ConfigBitBarNetworking = None
+    BitBar_custom: ConfigBitBarCustom = None
+
+    def __post_init__(self):
         config_sections = ["main", "BitBar", "BitBar_networking", "BitBar_custom"]
 
         # initialize a config obj for the user's logichub_tools.ini file
@@ -205,15 +218,14 @@ class Config:
                 if k not in self.user_settings_dict:
                     self.user_settings_dict[k] = {}
 
-        self.main = ConfigMain(**self.user_settings_dict["main"])
-        if not self.main.repo_path:
+        self.get_config_main(**self.user_settings_dict["main"])
+        if not self.main.bitbar_repo_path:
             print("bitbar_repo_path not set in logichub_tools.ini")
             sys.exit(1)
 
-        # ToDo drop these as class variables
-        self.BitBar = ConfigBitBar(**self.user_settings_dict["BitBar"])
-        self.BitBar_networking = ConfigBitBarNetworking(**self.user_settings_dict["BitBar_networking"])
-        self.BitBar_custom = ConfigBitBarCustom(**self.user_settings_dict["BitBar_custom"])
+        self.get_config_bitbar_params(**self.user_settings_dict["BitBar"])
+        self.get_config_bitbar_networking_params(**self.user_settings_dict["BitBar_networking"])
+        self.BitBar_custom = ConfigBitBarCustom()
 
         # Find the path to the home directory
         self.dir_user_home = os.environ.get("HOME")
@@ -229,7 +241,7 @@ class Config:
             self.default_ssh_key = os.path.join(self.dir_user_home, ".ssh", self.default_ssh_key)
 
         self.debug_enabled = self.BitBar.debug_output_enabled
-        self.dir_internal_tools = self.main.repo_path
+        self.dir_internal_tools = self.main.bitbar_repo_path
         self.dir_supporting_scripts = os.path.join(self.dir_internal_tools, "scripts")
         self.image_file_path = os.path.join(self.dir_internal_tools, 'supporting_files/images')
 
@@ -252,6 +264,30 @@ class Config:
         self.status_bar_text_color = self.BitBar.status_bar_text_color
         self.clipboard_update_notifications = self.BitBar.clipboard_update_notifications
         self.jira_default_prefix = self.BitBar.jira_default_prefix
+
+    def get_config_main(self, **kwargs):
+        self.main = ConfigMain(
+            bitbar_repo_path=kwargs.get("bitbar_repo_path", None),
+            local_user=kwargs.get("local_user", os.environ.get("USER")),
+            ssh_user=kwargs.get("ssh_user", os.environ.get("USER")),
+            ssh_key=kwargs.get("ssh_key", "id_rsa"),
+            os_theme=kwargs.get("os_theme", os.popen('defaults read -g AppleInterfaceStyle 2> /dev/null').read().strip() or "Light"),
+            default_loopback_interface=kwargs.get("default_loopback_interface", "lo0")
+        )
+
+    def get_config_bitbar_params(self, **kwargs):
+        self.BitBar = ConfigBitBar(
+            status_bar_style=kwargs.get("status_bar_style", "logo"),
+            status_bar_label=kwargs.get("status_bar_label", "LHUB"),
+            status_bar_icon_size=kwargs.get("status_bar_icon_size", "large"),
+            status_bar_text_color=kwargs.get("status_bar_text_color", "black"),
+            clipboard_update_notifications=convert_boolean(kwargs.get("clipboard_update_notifications", False)),
+            debug_output_enabled=convert_boolean(kwargs.get("debug_output_enabled", False)),
+            jira_default_prefix=kwargs.get("jira_default_prefix", "LHUB")
+        )
+
+    def get_config_bitbar_networking_params(self, **kwargs):
+        self.BitBar_networking = ConfigBitBarNetworking(kwargs)
 
 
 class BitBar:
@@ -980,7 +1016,6 @@ check_recent_user_activity
     def do_terminate_loopback_aliases(self):
         """
         from the old bash version:
-            function do_terminate_loopback_aliases {
             echo
             # When ready, add the following action to the bottom section:
             #echo "Terminate Loopback Aliases | bash='$0' param1=action_terminate_loopback_aliases terminal=true"
@@ -998,7 +1033,6 @@ check_recent_user_activity
             #        done
             #        displayNotification "Loopback aliases terminated"
             #    fi
-            }
         """
         print("Feature not yet enabled")
         pass
@@ -1209,7 +1243,6 @@ check_recent_user_activity
             return json_dict
 
     def json_validate(self):
-        """ Placeholder: JSON Validate """
         json_loaded = self.json_notifyAndExitWhenInvalidJson()
         if isinstance(json_loaded, dict):
             self.displayNotification("Valid JSON, type: dict")
@@ -1217,15 +1250,6 @@ check_recent_user_activity
             self.displayNotification(f"Valid JSON, type: {type(json_loaded).__name__}")
 
     def json_format(self):
-        """ Placeholder: JSON Format
-
-        json_format() {
-            json_notifyAndExitWhenInvalidJson
-
-            pbpaste | jq . --indent 2 | pbcopy
-            displayNotification "Formatted" ${title_json}
-        }
-        """
         json_loaded = self.json_notifyAndExitWhenInvalidJson()
         self.write_clipboard(json.dumps(json_loaded, ensure_ascii=False, indent=2))
 

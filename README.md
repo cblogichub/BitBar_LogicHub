@@ -11,6 +11,7 @@ The following Python packages are required. (See requirements.txt for exact vers
 * configparser
 * sqlparse
 * configobj
+* dataclasses-json
 
 # Installation
 1. Ensure that the requirements above are met
