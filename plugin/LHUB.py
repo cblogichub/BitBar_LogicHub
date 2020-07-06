@@ -1448,17 +1448,20 @@ check_recent_user_activity
         """
         self.write_clipboard(self.read_clipboard(trim_input=False))
 
+    def execute(self, action):
+        if not action:
+            self.print_bitbar_menu_output()
+        else:
+            try:
+                self.action_list[action].action()
+            except KeyError:
+                raise Exception("Not a valid action")
+
 
 def main():
     requested_action = None if len(sys.argv) == 1 else sys.argv[1]
     bar = BitBar()
-    if not requested_action:
-        bar.print_bitbar_menu_output()
-    else:
-        try:
-            bar.action_list[requested_action].action()
-        except KeyError:
-            raise Exception("Not a valid action")
+    bar.execute(requested_action)
 
 
 if __name__ == "__main__":
