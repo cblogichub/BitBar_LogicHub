@@ -130,11 +130,6 @@ def print_debug(msg):
         print(f"[DEBUG] {msg}")
 
 
-@dataclass
-class ConfigSection:
-    pass
-
-
 @dataclass_json
 @dataclass
 class ConfigMain:
@@ -153,6 +148,7 @@ class ConfigMain:
     # Return either "Dark" or "Light" for the OS theme
     os_theme: str
 
+    # Usually "lo0"
     default_loopback_interface: str
 
 
