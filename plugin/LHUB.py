@@ -956,7 +956,7 @@ check_recent_user_activity
             for _var in self.config.BitBar_networking.configs:
                 if isinstance(self.config.BitBar_networking.configs[_var], dict):
                     if self.config.BitBar_networking.configs[_var].get("type") == "ssh":
-                        self.ssh_tunnel_configs.append((self.config.BitBar_networking.configs[_var].get("name"), f"ssh_tunnel_custom_{_var}"))
+                        self.ssh_tunnel_configs.append((self.config.BitBar_networking.configs[_var].get("name", _var), f"ssh_tunnel_custom_{_var}"))
                     elif self.config.BitBar_networking.configs[_var].get("type") == "redirect":
                         self.port_redirect_configs.append((self.config.BitBar_networking.configs[_var].get("name"), f"port_redirect_custom_{_var}"))
 
