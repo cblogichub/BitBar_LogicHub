@@ -198,8 +198,8 @@ class ConfigBitBarCustom:
 class Config:
     main: ConfigMain = None
     BitBar: ConfigBitBar = None
-    BitBar_networking: ConfigBitBarNetworking = None
     BitBar_custom: ConfigBitBarCustom = None
+    BitBar_networking: ConfigBitBarNetworking = None
 
     def __post_init__(self):
         config_sections = ["main", "BitBar", "BitBar_networking", "BitBar_custom"]
