@@ -413,9 +413,9 @@ class BitBar:
         self.add_menu_section(":wrench: TECH | size=20 color=blue")
 
         self.print_in_bitbar_menu("JSON")
-        self.make_action("JSON Validate", self.json_validate)
-        self.make_action("JSON Format", self.json_format)
-        self.make_action("JSON Compact", self.json_compact)
+        self.make_action("JSON Validate", self.action_json_validate)
+        self.make_action("JSON Format", self.action_json_format)
+        self.make_action("JSON Compact", self.action_json_compact)
         self.make_action("JSON Fix (escaped strings to dicts/lists)", self.action_json_fix)
 
         self.print_in_bitbar_menu("Link Makers")
@@ -1250,18 +1250,18 @@ check_recent_user_activity
         else:
             return json_dict
 
-    def json_validate(self):
+    def action_json_validate(self):
         json_loaded = self.json_notify_and_exit_when_invalid()
         if isinstance(json_loaded, dict):
             self.display_notification("Valid JSON, type: dict")
         else:
             self.display_notification(f"Valid JSON, type: {type(json_loaded).__name__}")
 
-    def json_format(self):
+    def action_json_format(self):
         json_loaded = self.json_notify_and_exit_when_invalid()
         self.write_clipboard(json.dumps(json_loaded, ensure_ascii=False, indent=2))
 
-    def json_compact(self):
+    def action_json_compact(self):
         """ Placeholder: JSON Compact """
         json_loaded = self.json_notify_and_exit_when_invalid()
         self.write_clipboard(json.dumps(json_loaded, ensure_ascii=False, separators=(',', ':')))
