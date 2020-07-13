@@ -416,6 +416,7 @@ class BitBar:
         self.make_action("JSON Validate", self.json_validate)
         self.make_action("JSON Format", self.json_format)
         self.make_action("JSON Compact", self.json_compact)
+        self.make_action("JSON Fix (escaped strings to dicts/lists)", self.action_json_fix)
 
         self.print_in_bitbar_menu("Link Makers")
 
@@ -1206,6 +1207,30 @@ check_recent_user_activity
     ############################################################################
     # TECH -> JSON
 
+    @staticmethod
+    def do_fix_json(json_str):
+        def run_fix(obj, step_count=None):
+            step_count = 0 if step_count is None else step_count + 1
+            if type(obj) is bytes:
+                raise TypeError("JSON input cannot be bytes")
+            if type(obj) is str:
+                try:
+                    obj = json.loads(obj)
+                except (TypeError, json.JSONDecodeError) as err:
+                    if step_count:
+                        return obj
+                    else:
+                        raise Exception("Initial input could not be parsed as valid JSON")
+
+            # Loop through all entries in case there are nested dicts or strings.
+            if type(obj) in (list, tuple):
+                obj = [run_fix(entry, step_count=step_count) for entry in obj]
+            elif isinstance(obj, dict):
+                obj = {k: run_fix(obj[k], step_count=step_count) for k in obj.keys()}
+            return obj
+
+        return run_fix(json_str)
+
     def json_notify_and_exit_when_invalid(self):
         """
         Reusable script to validate that what is in the clipboard is valid JSON,
@@ -1240,6 +1265,18 @@ check_recent_user_activity
         """ Placeholder: JSON Compact """
         json_loaded = self.json_notify_and_exit_when_invalid()
         self.write_clipboard(json.dumps(json_loaded, ensure_ascii=False, separators=(',', ':')))
+
+    def action_json_fix(self):
+        """ Placeholder: JSON Compact """
+        # If there are newlines in the clipboard, assume that it is formatted JSON
+        # If no newlines, then return compact JSON
+        is_formatted = '\n' in BitBar.read_clipboard()
+        json_loaded = self.json_notify_and_exit_when_invalid()
+        fixed_json = self.do_fix_json(json_loaded)
+        if is_formatted:
+            self.write_clipboard(json.dumps(fixed_json, ensure_ascii=False, indent=2))
+        else:
+            self.write_clipboard(json.dumps(fixed_json, ensure_ascii=False, separators=(',', ':')))
 
     ############################################################################
     # TECH -> Link Makers
