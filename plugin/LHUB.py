@@ -416,7 +416,8 @@ class BitBar:
         self.make_action("JSON Validate", self.action_json_validate)
         self.make_action("JSON Format", self.action_json_format)
         self.make_action("JSON Compact", self.action_json_compact)
-        self.make_action("JSON Fix (escaped strings to dicts/lists)", self.action_json_fix)
+        self.make_action("Fix (escaped strings to dicts/lists)", self.action_json_fix)
+        self.make_action("Sort (recursive)", self.action_json_sort)
 
         self.print_in_bitbar_menu("Link Makers")
 
@@ -1208,7 +1209,7 @@ check_recent_user_activity
     # TECH -> JSON
 
     @staticmethod
-    def do_fix_json(json_str):
+    def _fix_json(json_str):
         def run_fix(obj, step_count=None):
             step_count = 0 if step_count is None else step_count + 1
             if type(obj) is bytes:
@@ -1230,6 +1231,37 @@ check_recent_user_activity
             return obj
 
         return run_fix(json_str)
+
+    @staticmethod
+    def _sort_dicts_and_lists(input_value):
+        """Sort dicts and lists recursively with a self-calling function"""
+        _output = input_value
+        # If the object is not a list or a dict, just return the value
+        if type(_output) not in (list, dict):
+            return _output
+        if isinstance(_output, dict):
+            # Crawl and sort dict values before sorting the dict itself
+            _output = {k: BitBar._sort_dicts_and_lists(v) for k, v in _output.items()}
+            # Sort dict by keys
+            _output = {k: _output[k] for k in sorted(_output.keys())}
+        elif isinstance(_output, list):
+            # Crawl and sort list values before sorting the list itself
+            _output = [BitBar._sort_dicts_and_lists(val) for val in _output]
+            try:
+                # Try to simply sort the list (will fail if entries are dicts or nested lists)
+                _output = sorted(_output)
+            except TypeError:
+                # Map string versions of entries to their real values
+                temp_map_input_as_strings = {}
+                for k in _output:
+                    try:
+                        temp_map_input_as_strings[json.dumps(k)] = k
+                    except:
+                        temp_map_input_as_strings[str(k)] = k
+
+                # Sort real values by their string versions
+                _output = [temp_map_input_as_strings[k] for k in sorted(temp_map_input_as_strings.keys())]
+        return _output
 
     def json_notify_and_exit_when_invalid(self):
         """
@@ -1272,11 +1304,21 @@ check_recent_user_activity
         # If no newlines, then return compact JSON
         is_formatted = '\n' in BitBar.read_clipboard()
         json_loaded = self.json_notify_and_exit_when_invalid()
-        fixed_json = self.do_fix_json(json_loaded)
+        fixed_json = BitBar._fix_json(json_loaded)
         if is_formatted:
             self.write_clipboard(json.dumps(fixed_json, ensure_ascii=False, indent=2))
         else:
             self.write_clipboard(json.dumps(fixed_json, ensure_ascii=False, separators=(',', ':')))
+
+    def action_json_sort(self):
+        """ JSON Sort """
+        is_formatted = '\n' in BitBar.read_clipboard()
+        json_loaded = self.json_notify_and_exit_when_invalid()
+        json_sorted = BitBar._sort_dicts_and_lists(json_loaded)
+        if is_formatted:
+            self.write_clipboard(json.dumps(json_sorted, ensure_ascii=False, indent=2))
+        else:
+            self.write_clipboard(json.dumps(json_sorted, ensure_ascii=False, separators=(',', ':')))
 
     ############################################################################
     # TECH -> Link Makers
