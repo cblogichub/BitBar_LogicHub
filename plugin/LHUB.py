@@ -414,10 +414,20 @@ class BitBar:
 
         self.print_in_bitbar_menu("JSON")
         self.make_action("JSON Validate", self.action_json_validate)
+
         self.make_action("JSON Format", self.action_json_format)
+        self.make_action("JSON Format (sorted)", self.action_json_format_sorted, alternate=True)
+
         self.make_action("JSON Compact", self.action_json_compact)
-        self.make_action("Fix (escaped strings to dicts/lists)", self.action_json_fix)
-        self.make_action("Sort (recursive)", self.action_json_sort)
+        self.make_action("JSON Compact (sorted)", self.action_json_compact_sorted, alternate=True)
+
+        self.make_action("JSON Semi-Compact", self.action_json_semi_compact)
+        self.make_action("JSON Semi-Compact (sorted)", self.action_json_semi_compact_sorted, alternate=True)
+
+        self.add_menu_divider_line(menu_depth=1)
+
+        self.make_action("Fix JSON (escaped strings to dicts/lists)", self.action_json_fix)
+        self.make_action("Sort by keys and values (recursive)", self.action_json_sort)
 
         self.print_in_bitbar_menu("Link Makers")
 
@@ -1208,6 +1218,8 @@ check_recent_user_activity
     ############################################################################
     # TECH -> JSON
 
+    # Reusable methods first
+    
     @staticmethod
     def _fix_json(json_str):
         def run_fix(obj, step_count=None):
@@ -1263,7 +1275,49 @@ check_recent_user_activity
                 _output = [temp_map_input_as_strings[k] for k in sorted(temp_map_input_as_strings.keys())]
         return _output
 
-    def json_notify_and_exit_when_invalid(self):
+    def _process_json_clipboard(self, sort_output=False, format_output=False, fix_output=False, compact_spacing=False, format_auto=False):
+        """
+        One method to standardize reading JSON from the clipboard, processing as needed, and updating the clipboard
+
+        :param sort_output: Sort by keys and values
+        :param format_output: Format JSON output with line breaks and indentation instead of a single line
+        :param fix_output: Fix values where dicts or lists are stored as escaped strings
+        :param compact_spacing: When converting JSON to a compact string, make it semi-compact (i.e. still include spaces after colons and commas)
+        :param format_auto: If set to True, override "format_output" and check whether there are line breaks in the clipboard input and set format_output automatically
+        :return: 
+        """
+
+        # Read clipboard, convert from JSON
+        json_loaded = self._json_notify_and_exit_when_invalid()
+
+        # If fix_output is enabled, crawl for dicts or lists stored as escaped strings
+        if fix_output:
+            json_loaded = BitBar._fix_json(json_loaded)
+
+        # If sort_output is enabled, sort recursively by keys and values
+        if sort_output:
+            json_loaded = BitBar._sort_dicts_and_lists(json_loaded)
+
+        if format_auto:
+            # If there are newlines in the clipboard, assume that it is formatted JSON
+            # If no newlines, then return compact JSON
+            if '\n' in BitBar.read_clipboard():
+                format_output = True
+                compact_spacing = True
+            else:
+                format_output = False
+
+        if format_output is True:
+            # Format output with line breaks and indentation
+            _output = json.dumps(json_loaded, ensure_ascii=False, indent=2)
+        else:
+            separators = (', ', ': ') if compact_spacing is True else (',', ':')
+            # Format output as a compact string on a single line
+            _output = json.dumps(json_loaded, ensure_ascii=False, separators=separators)
+
+        self.write_clipboard(_output)
+
+    def _json_notify_and_exit_when_invalid(self):
         """
         Reusable script to validate that what is in the clipboard is valid JSON,
         and raise an alert and exit if it is not.
@@ -1282,43 +1336,46 @@ check_recent_user_activity
         else:
             return json_dict
 
+    # BitBar actions next
+
     def action_json_validate(self):
-        json_loaded = self.json_notify_and_exit_when_invalid()
+        json_loaded = self._json_notify_and_exit_when_invalid()
         if isinstance(json_loaded, dict):
             self.display_notification("Valid JSON, type: dict")
         else:
             self.display_notification(f"Valid JSON, type: {type(json_loaded).__name__}")
 
     def action_json_format(self):
-        json_loaded = self.json_notify_and_exit_when_invalid()
-        self.write_clipboard(json.dumps(json_loaded, ensure_ascii=False, indent=2))
+        """ JSON Format """
+        self._process_json_clipboard(format_output=True)
+
+    def action_json_format_sorted(self):
+        """ JSON Format (sorted) """
+        self._process_json_clipboard(sort_output=True, format_output=True)
 
     def action_json_compact(self):
-        """ Placeholder: JSON Compact """
-        json_loaded = self.json_notify_and_exit_when_invalid()
-        self.write_clipboard(json.dumps(json_loaded, ensure_ascii=False, separators=(',', ':')))
+        """ JSON Compact """
+        self._process_json_clipboard()
+
+    def action_json_compact_sorted(self):
+        """ JSON Compact (sorted) """
+        self._process_json_clipboard(sort_output=True)
+
+    def action_json_semi_compact(self):
+        """ JSON Semi-Compact (compact but with spacing after colons and commas)"""
+        self._process_json_clipboard(compact_spacing=True)
+
+    def action_json_semi_compact_sorted(self):
+        """ JSON Semi-Compact (sorted) (compact but with spacing after colons and commas) """
+        self._process_json_clipboard(sort_output=True, compact_spacing=True)
 
     def action_json_fix(self):
-        """ Placeholder: JSON Compact """
-        # If there are newlines in the clipboard, assume that it is formatted JSON
-        # If no newlines, then return compact JSON
-        is_formatted = '\n' in BitBar.read_clipboard()
-        json_loaded = self.json_notify_and_exit_when_invalid()
-        fixed_json = BitBar._fix_json(json_loaded)
-        if is_formatted:
-            self.write_clipboard(json.dumps(fixed_json, ensure_ascii=False, indent=2))
-        else:
-            self.write_clipboard(json.dumps(fixed_json, ensure_ascii=False, separators=(',', ':')))
+        """ JSON Fix """
+        self._process_json_clipboard(fix_output=True, compact_spacing=True, format_auto=True)
 
     def action_json_sort(self):
         """ JSON Sort """
-        is_formatted = '\n' in BitBar.read_clipboard()
-        json_loaded = self.json_notify_and_exit_when_invalid()
-        json_sorted = BitBar._sort_dicts_and_lists(json_loaded)
-        if is_formatted:
-            self.write_clipboard(json.dumps(json_sorted, ensure_ascii=False, indent=2))
-        else:
-            self.write_clipboard(json.dumps(json_sorted, ensure_ascii=False, separators=(',', ':')))
+        self._process_json_clipboard(sort_output=True, compact_spacing=True, format_auto=True)
 
     ############################################################################
     # TECH -> Link Makers
