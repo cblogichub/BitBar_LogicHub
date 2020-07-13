@@ -490,6 +490,21 @@ class BitBar:
     ############################################################################
     # Reusable functions
     ############################################################################
+    def display_notification(self, content, title=None):
+        content = content.replace('"', '\\"')
+        if not title:
+            title = self.title_default
+        # subprocess.call(["osascript", "-e", f'display notification "{content}" with title "{title}"'])
+        _output = os.popen(f'osascript -e "display notification \\"{content}\\" with title \\"{title}\\""')
+
+    def display_notification_error(self, content, title=None, print_stderr=False):
+        _output = os.popen('osascript -e "beep"')
+        _error = f"Failed with error: {content}"
+        if print_stderr:
+            print(f"\n{_error}\n")
+        self.display_notification(_error, title)
+        sys.exit(1)
+
     def print_in_bitbar_menu(self, msg):
         if self.bitbar_menu_output:
             self.bitbar_menu_output += "\n"
@@ -503,7 +518,7 @@ class BitBar:
         except TypeError as e:
             if type(msg) not in [str]:
                 raise type(msg)(msg)
-        self.displayNotificationError(msg)
+        self.display_notification_error(msg)
 
     def image_to_base64_string(self, file_name):
         file_path = os.path.join(self.config.image_file_path, file_name)
@@ -549,20 +564,6 @@ class BitBar:
         self.print_in_bitbar_menu(f'{menu_name} | {action_string} bash="{self.script_name}" param1="{action_id}" terminal={terminal}')
         return _var
 
-    def displayNotification(self, content, title=None):
-        content = content.replace('"', '\\"')
-        if not title:
-            title = self.title_default
-        # subprocess.call(["osascript", "-e", f'display notification "{content}" with title "{title}"'])
-        _output = os.popen(f'osascript -e "display notification \\"{content}\\" with title \\"{title}\\""')
-
-    def displayNotificationError(self, content, title=None, print_stderr=False):
-        _output = os.popen('osascript -e "beep"')
-        if print_stderr:
-            print(f"\nFailed with error: {content}\n")
-        self.displayNotification(f"Failed with error: {content}", title)
-        sys.exit(1)
-
     @staticmethod
     def read_clipboard(trim_input=True):
         clip = clipboard.paste()
@@ -573,7 +574,7 @@ class BitBar:
     def write_clipboard(self, text):
         clipboard.copy(text)
         if self.config.clipboard_update_notifications:
-            self.displayNotification("Clipboard updated")
+            self.display_notification("Clipboard updated")
 
     def copy_file_contents_to_clipboard(self, file_path, file_name=None):
         """
@@ -591,7 +592,7 @@ class BitBar:
         if file_name.strip():
             file_path = os.path.join(file_path, file_name)
         if not os.path.isfile(file_path):
-            self.displayNotificationError("Invalid path to supporting script")
+            self.display_notification_error("Invalid path to supporting script")
         with open(file_path, "rU") as f:
             output = f.read()
         self.write_clipboard(output)
@@ -603,7 +604,7 @@ class BitBar:
             # To make sure this works whether or not the leading 'm' is provided, strip out any 'm'
             version = version.replace('m', '').strip()
             if not version.strip() or not re.match(r'^\d{2,}\.\d+$', version):
-                self.displayNotificationError("Invalid LogicHub version")
+                self.display_notification_error("Invalid LogicHub version")
         return f"bash <(curl https://s3-us-west-1.amazonaws.com/lhub-installer/installer-m{version}.sh)"
 
     @staticmethod
@@ -659,7 +660,7 @@ class BitBar:
         try:
             _output = BitBar.pretty_print_sql(_input, **kwargs)
         except Exception as err:
-            self.displayNotificationError("Exception from sqlparse: {}".format(repr(err)))
+            self.display_notification_error("Exception from sqlparse: {}".format(repr(err)))
         else:
             self.write_clipboard(_output)
 
@@ -749,13 +750,13 @@ class BitBar:
     def logichub_operator_start_autoJoinTables(self):
         _input = BitBar.read_clipboard()
         if ' ' in _input:
-            self.displayNotificationError("Invalid input; table name cannot contain spaces")
+            self.display_notification_error("Invalid input; table name cannot contain spaces")
         self.write_clipboard(f'autoJoinTables([{_input}, xxxx])')
 
     def logichub_operator_start_jsonToColumns(self):
         _input = BitBar.read_clipboard()
         if ' ' in _input:
-            self.displayNotificationError("Invalid input; table name cannot contain spaces")
+            self.display_notification_error("Invalid input; table name cannot contain spaces")
         self.write_clipboard(f'jsonToColumns({_input}, "result")')
 
     def logichub_event_file_URL_from_file_name(self):
@@ -981,7 +982,7 @@ check_recent_user_activity
         # Check for an existing SSH tunnel. If none is found, abort, otherwise kill each process found.
         if not tunnel_PIDs:
             print("No existing SSH tunnels found")
-            self.displayNotification("No existing SSH tunnels found")
+            self.display_notification("No existing SSH tunnels found")
         else:
             # Validate sudo session
             do_prompt_for_sudo()
@@ -991,7 +992,7 @@ check_recent_user_activity
                 _tmp_ssh_server = re.findall(r'-f +(\S+)', tunnel)[0]
                 print(f"Killing {local_host_info} --> {remote_host_info} via {_tmp_ssh_server} (PID {PID})")
                 _ = _run_cli_command(f'sudo kill -9 {PID}')
-            self.displayNotification("Tunnels terminated")
+            self.display_notification("Tunnels terminated")
 
     def action_terminate_tunnels(self):
         self.do_terminate_tunnels()
@@ -1001,7 +1002,7 @@ check_recent_user_activity
         _run_cli_command('sudo pfctl -f /etc/pf.conf')
         output_msg = "Port redirection terminated"
         print(output_msg)
-        self.displayNotification(output_msg)
+        self.display_notification(output_msg)
 
     def action_terminate_port_redirection(self):
         do_prompt_for_sudo()
@@ -1027,7 +1028,7 @@ check_recent_user_activity
             #            echo "Deleting loopback IP ${loopback_alias}"
             #            sudo ifconfig ${loopback_interface} ${loopback_alias} delete
             #        done
-            #        displayNotification "Loopback aliases terminated"
+            #        display_notification "Loopback aliases terminated"
             #    fi
         """
         print("Feature not yet enabled")
@@ -1065,20 +1066,20 @@ check_recent_user_activity
         _ = _run_shell_command_with_pipes(_command)
         result = f"Port Redirection Enabled:\n\n{source_address}:{source_port} --> {target_address}:{target_port}"
         print(f"\n{result}\n")
-        self.displayNotification(result)
+        self.display_notification(result)
 
     def port_redirect_custom(self):
         def get_var(var_name):
             var = (config_dict.get(var_name) or "").strip()
             if not var:
-                self.displayNotificationError(f"variable {var_name} not found in redirect config", print_stderr=True)
+                self.display_notification_error(f"variable {var_name} not found in redirect config", print_stderr=True)
             return var
 
         # """ Custom port redirection based on entries in logichub_tools.ini """
         config_name = re.sub('^port_redirect_custom_', '', sys.argv[1])
         config_dict = self.config.BitBar_networking.configs.get(config_name)
         if not config_dict:
-            self.displayNotificationError(f"Port redirect config [{config_name}] not found", print_stderr=True)
+            self.display_notification_error(f"Port redirect config [{config_name}] not found", print_stderr=True)
 
         source_address = get_var('source_address')
         source_port = get_var('source_port')
@@ -1193,7 +1194,7 @@ check_recent_user_activity
         """ Custom SSH tunnel based on entries in logichub_tools.ini """
         config_name = re.sub('^ssh_tunnel_custom_', '', sys.argv[1])
         if not self.config.BitBar_networking.configs.get(config_name):
-            self.displayNotificationError(f"SSH tunnel config [{config_name}] not found", print_stderr=True)
+            self.display_notification_error(f"SSH tunnel config [{config_name}] not found", print_stderr=True)
         tunnel_config = self.config.BitBar_networking.configs[config_name]
         self.do_execute_ssh_tunnel(tunnel_config)
 
@@ -1233,25 +1234,25 @@ check_recent_user_activity
         """
         json_dict = BitBar.json_doValidate()
         if not json_dict:
-            self.displayNotificationError(self.notification_json_invalid, self.title_json)
+            self.display_notification_error(self.notification_json_invalid, self.title_json)
             sys.exit(1)
         else:
             return json_dict
 
     def json_validate(self):
-        json_loaded = self.json_notifyAndExitWhenInvalidJson()
+        json_loaded = self.json_notify_and_exit_when_invalid()
         if isinstance(json_loaded, dict):
-            self.displayNotification("Valid JSON, type: dict")
+            self.display_notification("Valid JSON, type: dict")
         else:
-            self.displayNotification(f"Valid JSON, type: {type(json_loaded).__name__}")
+            self.display_notification(f"Valid JSON, type: {type(json_loaded).__name__}")
 
     def json_format(self):
-        json_loaded = self.json_notifyAndExitWhenInvalidJson()
+        json_loaded = self.json_notify_and_exit_when_invalid()
         self.write_clipboard(json.dumps(json_loaded, ensure_ascii=False, indent=2))
 
     def json_compact(self):
         """ Placeholder: JSON Compact """
-        json_loaded = self.json_notifyAndExitWhenInvalidJson()
+        json_loaded = self.json_notify_and_exit_when_invalid()
         self.write_clipboard(json.dumps(json_loaded, ensure_ascii=False, separators=(',', ':')))
 
     ############################################################################
