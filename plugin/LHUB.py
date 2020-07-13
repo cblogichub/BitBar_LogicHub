@@ -29,105 +29,103 @@ user_config_file = "logichub_tools.ini"
 debug_enabled = False
 
 
-def _validate_command(cmd: str or bytes or list or tuple):
+class Log:
     """
-    Verify command format. Accepts string, bytes, list of strings, or tuple of strings,
-    and returns a formatted command ready for the subprocess.run() method
-    :param cmd: Desired shell command in any supported format
-    :return formatted_cmd: List of split command parts
+    Simple class for debug logging for the time being. May eventually replace with a real Logger
     """
-    if type(cmd) is bytes:
-        # convert to a string; further convert as a string in the next step
-        cmd = cmd.decode('utf-8')
-    if type(cmd) is str:
-        cmd = cmd.strip()
-    if not cmd:
-        raise ValueError("No command provided")
-    elif "|" in cmd or (isinstance(cmd, (list, tuple)) and "|" in ','.join(cmd)):
-        raise ValueError("Pipe commands not supported at this time")
-    elif isinstance(cmd, (list, tuple)):
-        # If the command is already a list or tuple, then assume it is already ready to be used
-        return cmd
-    # At this point the command must be a string format to continue.
-    if type(cmd) is str:
-        # Use shlex to split into a list for subprocess input
-        formatted_cmd = shlex.split(cmd.strip())
-        if not formatted_cmd or type(formatted_cmd) is not list:
-            raise ValueError("Command failed to parse into a valid list of parts")
-    else:
-        raise TypeError(f"Command validation failed: type {type(cmd).__name} not supported")
-    return formatted_cmd
+    @property
+    def debug_enabled(self):
+        return debug_enabled
+
+    def debug(self, msg):
+        if self.debug_enabled:
+            print(f"[DEBUG] {msg}")
 
 
-def _run_cli_command(cmd, timeout: int = 30, test: bool = True, capture_output: bool = True):
-    """
-    Reusable method to standardize CLI calls
+class Reusable:
+    # Class for static reusable methods, mainly just to group these together to better organize for readability
 
-    :param cmd: Command to execute (can be string or list)
-    :param cmd: Timeout in seconds (default 30)
-    :param bool test: Whether to test that the command completed successfully (default True)
-    :param bool capture_output: Whether to capture the output or allow it to pass to the terminal. (Usually True, but False for things like prompting for the sudo password)
-    :return:
-    """
-    # Also tried these, but settled on subprocess.run:
-    # subprocess.call("command1")
-    # subprocess.call(["command1", "arg1", "arg2"])
-    # or
-    # import os
-    # os.popen("full command string")
-    print_debug(f"Executing command: {cmd}")
-    _cmd = _validate_command(cmd)
-    _result = subprocess.run(_cmd, capture_output=capture_output, universal_newlines=True, timeout=timeout)
-    if test:
-        _result.check_returncode()
-    return _result
+    @staticmethod
+    def run_cli_command(cmd, timeout: int = 30, test: bool = True, capture_output: bool = True):
+        """
+        Reusable method to standardize CLI calls
 
+        :param cmd: Command to execute (can be string or list)
+        :param cmd: Timeout in seconds (default 30)
+        :param bool test: Whether to test that the command completed successfully (default True)
+        :param bool capture_output: Whether to capture the output or allow it to pass to the terminal. (Usually True, but False for things like prompting for the sudo password)
+        :return:
+        """
+        def _validate_command(cmd: str or bytes or list or tuple):
+            """
+            Verify command format. Accepts string, bytes, list of strings, or tuple of strings,
+            and returns a formatted command ready for the subprocess.run() method
+            :param cmd: Desired shell command in any supported format
+            :return formatted_cmd: List of split command parts
+            """
+            if type(cmd) is bytes:
+                # convert to a string; further convert as a string in the next step
+                cmd = cmd.decode('utf-8')
+            if type(cmd) is str:
+                cmd = cmd.strip()
+            if not cmd:
+                raise ValueError("No command provided")
+            elif "|" in cmd or (isinstance(cmd, (list, tuple)) and "|" in ','.join(cmd)):
+                raise ValueError("Pipe commands not supported at this time")
+            elif isinstance(cmd, (list, tuple)):
+                # If the command is already a list or tuple, then assume it is already ready to be used
+                return cmd
+            # At this point the command must be a string format to continue.
+            if type(cmd) is str:
+                # Use shlex to split into a list for subprocess input
+                formatted_cmd = shlex.split(cmd.strip())
+                if not formatted_cmd or type(formatted_cmd) is not list:
+                    raise ValueError("Command failed to parse into a valid list of parts")
+            else:
+                raise TypeError(f"Command validation failed: type {type(cmd).__name} not supported")
+            return formatted_cmd
 
-def _run_shell_command_with_pipes(command, print_result=True, indent: int = 5):
-    """Simple version for now. May revisit later to improve it."""
-    print_debug(f"Executing command: {command}")
-    _output = subprocess.getoutput(command)
-    if print_result:
-        if indent > 0:
-            for _line in _output.split('\n'):
-                print(" " * indent + _line)
-        else:
-            print(_output)
-    return _output
+        # Also tried these, but settled on subprocess.run:
+        # subprocess.call("command1")
+        # subprocess.call(["command1", "arg1", "arg2"])
+        # or
+        # import os
+        # os.popen("full command string")
+        log.debug(f"Executing command: {cmd}")
+        _cmd = _validate_command(cmd)
+        _result = subprocess.run(_cmd, capture_output=capture_output, universal_newlines=True, timeout=timeout)
+        if test:
+            _result.check_returncode()
+        return _result
 
+    @staticmethod
+    def run_shell_command_with_pipes(command, print_result=True, indent: int = 5):
+        """Simple version for now. May revisit later to improve it."""
+        log.debug(f"Executing command: {command}")
+        _output = subprocess.getoutput(command)
+        if print_result:
+            if indent > 0:
+                for _line in _output.split('\n'):
+                    print(" " * indent + _line)
+            else:
+                print(_output)
+        return _output
 
-def do_prompt_for_sudo():
-    # If a sudo session is not already active, auth for sudo and start the clock.
-    # This function can be called as many times as desired to and will not cause re-prompting unless the timeout has been exceeded.
-    _ = _run_cli_command('sudo -v -p "sudo password: "', timeout=None, test=True, capture_output=False)
+    @staticmethod
+    def do_prompt_for_sudo():
+        # If a sudo session is not already active, auth for sudo and start the clock.
+        # This function can be called as many times as desired to and will not cause re-prompting unless the timeout has been exceeded.
+        _ = Reusable.run_cli_command('sudo -v -p "sudo password: "', timeout=None, test=True, capture_output=False)
 
-
-def convert_boolean(_var):
-    if type(_var) is str:
-        _var2 = _var.strip().lower()
-        if _var2 in ["yes", "true"]:
-            return True
-        elif _var2 in ["no", "false"]:
-            return False
-    return _var
-
-
-def sort_dict(_var):
-    _safe_dict = json.loads(json.dumps(_var))
-    if _safe_dict is list:
-        return sorted(_safe_dict)
-    elif not isinstance(_safe_dict, dict):
-        return convert_boolean(_safe_dict)
-    new_dict = {}
-    for _key in sorted(_safe_dict.keys()):
-        new_value = sort_dict(_safe_dict[_key])
-        new_dict[_key] = new_value
-    return new_dict
-
-
-def print_debug(msg):
-    if debug_enabled:
-        print(f"[DEBUG] {msg}")
+    @staticmethod
+    def convert_boolean(_var):
+        if type(_var) is str:
+            _var2 = _var.strip().lower()
+            if _var2 in ["yes", "true"]:
+                return True
+            elif _var2 in ["no", "false"]:
+                return False
+        return _var
 
 
 @dataclass_json
@@ -277,8 +275,8 @@ class Config:
             status_bar_label=kwargs.get("status_bar_label", "LHUB"),
             status_bar_icon_size=kwargs.get("status_bar_icon_size", "large"),
             status_bar_text_color=kwargs.get("status_bar_text_color", "black"),
-            clipboard_update_notifications=convert_boolean(kwargs.get("clipboard_update_notifications", False)),
-            debug_output_enabled=convert_boolean(kwargs.get("debug_output_enabled", False)),
+            clipboard_update_notifications=Reusable.convert_boolean(kwargs.get("clipboard_update_notifications", False)),
+            debug_output_enabled=Reusable.convert_boolean(kwargs.get("debug_output_enabled", False)),
             jira_default_prefix=kwargs.get("jira_default_prefix", "LHUB")
         )
 
@@ -980,7 +978,7 @@ check_recent_user_activity
         """Terminate SSH tunnels"""
 
         # Get PID for all open SSH tunnels
-        _cmd_result = _run_cli_command("ps -ef")
+        _cmd_result = Reusable.run_cli_command("ps -ef")
         pid_pattern = re.compile(r"^\s*\d+\s+(\d+)")
         specific_loopback = (loopback_ip.strip() if loopback_ip else "") + ":"
         if specific_loopback and loopback_port:
@@ -997,13 +995,13 @@ check_recent_user_activity
             self.display_notification("No existing SSH tunnels found")
         else:
             # Validate sudo session
-            do_prompt_for_sudo()
+            Reusable.do_prompt_for_sudo()
             for PID in tunnel_PIDs:
                 tunnel = tunnel_PIDs[PID]
                 local_host_info, remote_host_info = re.findall(r"[^\s:]+:\d+(?=:|\s)", tunnel)[0:2]
                 _tmp_ssh_server = re.findall(r'-f +(\S+)', tunnel)[0]
                 print(f"Killing {local_host_info} --> {remote_host_info} via {_tmp_ssh_server} (PID {PID})")
-                _ = _run_cli_command(f'sudo kill -9 {PID}')
+                _ = Reusable.run_cli_command(f'sudo kill -9 {PID}')
             self.display_notification("Tunnels terminated")
 
     def action_terminate_tunnels(self):
@@ -1011,13 +1009,13 @@ check_recent_user_activity
 
     def do_terminate_port_redirection(self):
         print("Resetting port forwarding/redirection...")
-        _run_cli_command('sudo pfctl -f /etc/pf.conf')
+        Reusable.run_cli_command('sudo pfctl -f /etc/pf.conf')
         output_msg = "Port redirection terminated"
         print(output_msg)
         self.display_notification(output_msg)
 
     def action_terminate_port_redirection(self):
-        do_prompt_for_sudo()
+        Reusable.do_prompt_for_sudo()
         self.do_terminate_port_redirection()
 
     # ToDo Finish this or find an alternate way of helping with managing loopback aliases
@@ -1052,7 +1050,7 @@ check_recent_user_activity
 
     def action_terminate_all(self):
         # Validate sudo session
-        do_prompt_for_sudo()
+        Reusable.do_prompt_for_sudo()
 
         print("\nTerminating all SSH tunnels tunnels...\n")
         self.do_terminate_tunnels()
@@ -1071,11 +1069,11 @@ check_recent_user_activity
 
     def do_execute_port_redirect(self, source_address, source_port, target_address, target_port):
         self.do_verify_loopback_address(source_address)
-        print_debug(f"Making alias to redirect {source_address}:{source_port} --> {target_address}:{target_port}")
+        log.debug(f"Making alias to redirect {source_address}:{source_port} --> {target_address}:{target_port}")
 
         _command = f'echo "rdr pass inet proto tcp from any to {source_address} port {source_port} -> {target_address} port {target_port}" | sudo -p "sudo password: " pfctl -ef -'
         print()
-        _ = _run_shell_command_with_pipes(_command)
+        _ = Reusable.run_shell_command_with_pipes(_command)
         result = f"Port Redirection Enabled:\n\n{source_address}:{source_port} --> {target_address}:{target_port}"
         print(f"\n{result}\n")
         self.display_notification(result)
@@ -1099,7 +1097,7 @@ check_recent_user_activity
         target_port = get_var('target_port')
         optional_exit_message = config_dict.get("optional_exit_message")
 
-        do_prompt_for_sudo()
+        Reusable.do_prompt_for_sudo()
         print(f"\nSetting up redirection for config \"{config_dict['name']}\"...\n")
 
         self.do_execute_port_redirect(source_address, source_port, target_address, target_port)
@@ -1119,16 +1117,16 @@ check_recent_user_activity
 
         # Trim input, just in case
         loopback_ip = loopback_ip.strip()
-        interfaces_output = _run_cli_command("ifconfig -a")
+        interfaces_output = Reusable.run_cli_command("ifconfig -a")
 
         # Make sure loopback alias exists; create if needed.
         if re.findall(rf"\b{loopback_ip}\b", interfaces_output.stdout):
-            print_debug(f"Existing loopback alias {loopback_ip} found")
+            log.debug(f"Existing loopback alias {loopback_ip} found")
         else:
-            print_debug(f"Loopback alias {loopback_ip} not found; creating")
+            log.debug(f"Loopback alias {loopback_ip} not found; creating")
             # Validate sudo session
-            do_prompt_for_sudo()
-            _ = _run_cli_command(f"sudo ifconfig {self.loopback_interface} alias ${loopback_ip}")
+            Reusable.do_prompt_for_sudo()
+            _ = Reusable.run_cli_command(f"sudo ifconfig {self.loopback_interface} alias ${loopback_ip}")
 
     def do_verify_ssh_tunnel_available(self, loopback_ip, loopback_port):
         print(f"Checking for existing tunnels {loopback_ip}:{loopback_port}...")
@@ -1142,7 +1140,7 @@ check_recent_user_activity
         :return:
         """
         # Validate sudo session
-        do_prompt_for_sudo()
+        Reusable.do_prompt_for_sudo()
 
         ssh_config_name = config_dict.get("name")
         remote_address = config_dict.get("remote_ip")
@@ -1198,7 +1196,7 @@ check_recent_user_activity
 
         # Run SSH command
         # Bash version for reference: eval "${ssh_command}"
-        _ = _run_cli_command(ssh_command, capture_output=False, timeout=60)
+        _ = Reusable.run_cli_command(ssh_command, capture_output=False, timeout=60)
 
         print(f"\nSSH tunnel complete\n\n")
 
@@ -1219,7 +1217,7 @@ check_recent_user_activity
     # TECH -> JSON
 
     # Reusable methods first
-    
+
     @staticmethod
     def _fix_json(json_str):
         def run_fix(obj, step_count=None):
@@ -1579,6 +1577,9 @@ check_recent_user_activity
                 self.action_list[action].action()
             except KeyError:
                 raise Exception("Not a valid action")
+
+
+log = Log()
 
 
 def main():
