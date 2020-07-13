@@ -338,6 +338,12 @@ class BitBar:
         self.make_action("Event File URL from File Name", self.logichub_event_file_URL_from_file_name)
         self.make_action("Event File URL path (static)", self.logichub_event_file_URL_static, alternate=True)
 
+        self.add_menu_divider_line(menu_depth=1)
+
+        self.make_action("BETA: Spark Commands", None, text_color="blue")
+        self.make_action("from_json: Create column from JSON clipboard", self.action_spark_from_json)
+        self.make_action("schema_of_json: Create column from JSON clipboard", self.action_json_to_schema_of_json)
+
         self.print_in_bitbar_menu("Shell: Host")
         self.make_action("Add myself to docker group", self.shell_lh_host_fix_add_self_to_docker_group)
         self.make_action("Own Instance Version", self.logichub_shell_own_instance_version)
@@ -553,7 +559,7 @@ class BitBar:
         # Set status bar text and/or logo
         self.print_in_bitbar_menu(self.status)
 
-    def make_action(self, name, action, action_id=None, menu_depth=1, alternate=False, terminal=False):
+    def make_action(self, name, action, action_id=None, menu_depth=1, alternate=False, terminal=False, text_color=None):
         menu_name = name
         if menu_depth:
             menu_name = '--' * menu_depth + ' ' + menu_name
@@ -561,7 +567,10 @@ class BitBar:
         if alternate:
             action_string = action_string + ' alternate=true'
         if not action:
-            self.print_in_bitbar_menu(f'{menu_name} | {action_string}')
+            if text_color:
+                self.print_in_bitbar_menu(f'{menu_name} | {action_string} color={text_color}')
+            else:
+                self.print_in_bitbar_menu(f'{menu_name} | {action_string}')
             return
 
         if not action_id:
@@ -775,6 +784,76 @@ class BitBar:
 
     def logichub_event_file_URL_static(self):
         self.write_clipboard(f'file:///opt/docker/data/service/event_files/')
+
+    @staticmethod
+    def _strip_json_for_spark(input_value):
+        if input_value is None:
+            # If nulls are present, assume that they're strings
+            return "x"
+        elif isinstance(input_value, list):
+            # First drop null values from the list
+            input_value = [x for x in input_value if x]
+            if not input_value:
+                # If a list is empty, assume that it's a list of strings
+                return ["x"]
+            else:
+                # If a list has values, just return a list of only the first value
+                return [BitBar._strip_json_for_spark(input_value[0])]
+        elif isinstance(input_value, dict):
+            # Workaround: If a dict is empty, then schema_of_json will say it's a struct without keys, so make it a string instead
+            if not input_value:
+                return "{}"
+            return {k: BitBar._strip_json_for_spark(v) for k, v in input_value.items()}
+        elif type(input_value) is str:
+            return "x"
+        else:
+            return input_value
+
+    def action_spark_from_json(self):
+        def format_for_spark(_input):
+            types = {
+                str: "string",
+                bool: "boolean",
+                float: "double",
+                int: "bigint",
+            }
+            if type(_input) in types.keys():
+                return types[type(_input)]
+
+            if isinstance(_input, dict):
+                format_str = "struct<"
+                for k, v in _input.items():
+                    format_str += f"{k}: {format_for_spark(v)}, "
+
+                if format_str.endswith(", "):
+                    format_str = format_str[:-2]
+                format_str += '>'
+                return format_str
+            elif isinstance(_input, list):
+                format_str = f"array<{format_for_spark(_input[0])}>"
+            else:
+                raise TypeError(f"Unmapped data type: {type(_input)}")
+            return format_str
+
+        # Read clipboard, but drop single quotes if any are found
+        json_str = self.read_clipboard().replace("'", "")
+        # Convert json to dict or list
+        json_loaded = self._json_notify_and_exit_when_invalid(manual_input=json_str)
+        json_updated = BitBar._strip_json_for_spark(json_loaded)
+        # json_text = json.dumps(json_updated, ensure_ascii=False, separators=(', ', ': '))
+        # _output = f"SCHEMA_OF_JSON('{json_text}') AS json_test"
+        _output = f"FROM_JSON(COLUMN_NAME, '{format_for_spark(json_updated)}') AS NEW_COLUMN_NAME"
+        self.write_clipboard(_output)
+
+    def action_json_to_schema_of_json(self):
+        # Read clipboard, but drop single quotes if any are found
+        json_str = self.read_clipboard().replace("'", "")
+        # Convert json to dict or list
+        json_loaded = self._json_notify_and_exit_when_invalid(manual_input=json_str)
+        json_updated = BitBar._strip_json_for_spark(json_loaded)
+        json_text = json.dumps(json_updated, ensure_ascii=False, separators=(', ', ': '))
+        _output = f"SCHEMA_OF_JSON('{json_text}') AS json_test"
+        self.write_clipboard(_output)
 
     ############################################################################
     # LogicHub -> Shell: Host
@@ -1315,14 +1394,17 @@ check_recent_user_activity
 
         self.write_clipboard(_output)
 
-    def _json_notify_and_exit_when_invalid(self):
+    def _json_notify_and_exit_when_invalid(self, manual_input=None):
         """
         Reusable script to validate that what is in the clipboard is valid JSON,
         and raise an alert and exit if it is not.
 
         :return:
         """
-        _input = BitBar.read_clipboard()
+        if manual_input:
+            _input = manual_input
+        else:
+            _input = BitBar.read_clipboard()
         try:
             json_dict = json.loads(_input, strict=False)
         except ValueError:
