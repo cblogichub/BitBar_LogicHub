@@ -1206,34 +1206,20 @@ check_recent_user_activity
     ############################################################################
     # TECH -> JSON
 
-    @staticmethod
-    def json_doValidate():
-        """
-        Reusable function to validate clipboard as valid JSON. Will return either
-        an ordered dict or a list if valid, otherwise it will return None
-
-        :return: list, ordered dict, or None
-        """
-        _input = BitBar.read_clipboard()
-        try:
-            _output = json.loads(_input, strict=False)
-        except ValueError:
-            return None
-        else:
-            if isinstance(_output, (dict, list)):
-                return _output
-            else:
-                return None
-
-    def json_notifyAndExitWhenInvalidJson(self):
+    def json_notify_and_exit_when_invalid(self):
         """
         Reusable script to validate that what is in the clipboard is valid JSON,
         and raise an alert and exit if it is not.
 
         :return:
         """
-        json_dict = BitBar.json_doValidate()
-        if not json_dict:
+        _input = BitBar.read_clipboard()
+        try:
+            json_dict = json.loads(_input, strict=False)
+        except ValueError:
+            json_dict = None
+
+        if not json_dict or not isinstance(json_dict, (dict, list)):
             self.display_notification_error(self.notification_json_invalid, self.title_json)
             sys.exit(1)
         else:
