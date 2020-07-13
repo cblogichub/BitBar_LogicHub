@@ -840,9 +840,10 @@ class BitBar:
         # Convert json to dict or list
         json_loaded = self._json_notify_and_exit_when_invalid(manual_input=json_str)
         json_updated = BitBar._strip_json_for_spark(json_loaded)
-        # json_text = json.dumps(json_updated, ensure_ascii=False, separators=(', ', ': '))
-        # _output = f"SCHEMA_OF_JSON('{json_text}') AS json_test"
-        _output = f"FROM_JSON(COLUMN_NAME, '{format_for_spark(json_updated)}') AS NEW_COLUMN_NAME"
+        try:
+            _output = f"FROM_JSON(COLUMN_NAME, '{format_for_spark(json_updated)}') AS NEW_COLUMN_NAME"
+        except TypeError as e:
+            _output = str(e)
         self.write_clipboard(_output)
 
     def action_json_to_schema_of_json(self):
