@@ -322,8 +322,16 @@ class BitBar:
 
         self.make_action("Tabs to commas", self.logichub_tabs_to_columns)
         self.make_action("Tabs to commas (force lowercase)", self.logichub_tabs_to_columns_lowercase, alternate=True)
+
+        self.make_action("Tabs to commas (sorted)", self.logichub_tabs_to_columns_sorted)
+        self.make_action("Tabs to commas (sorted, force lowercase)", self.logichub_tabs_to_columns_sorted_lowercase, alternate=True)
+
         self.make_action("Tabs to commas & quotes", self.logichub_tabs_to_columns_and_quotes)
         self.make_action("Tabs to commas & quotes (force lowercase)", self.logichub_tabs_to_columns_and_quotes_lowercase, alternate=True)
+
+        self.make_action("Tabs to commas & quotes (sorted)", self.logichub_tabs_to_columns_and_quotes_sorted)
+        self.make_action("Tabs to commas & quotes (sorted, force lowercase)", self.logichub_tabs_to_columns_and_quotes_sorted_lowercase, alternate=True)
+
         self.make_action("SQL New (from table name)", self.logichub_sql_start_from_table_name)
         self.make_action("SQL New (without table name)", self.logichub_sql_start_without_table_name, alternate=True)
         self.make_action("SQL Start from spaced strings", self.logichub_sql_start_from_tabs)
@@ -699,25 +707,40 @@ class BitBar:
         """
         self.logichub_pretty_print_sql(wrap_after=99999)
 
-    def logichub_tabs_to_columns(self, force_lower=False):
+    def _split_tabs_to_columns(self, force_lower=False, sort=False, quote=False):
         _input = BitBar.read_clipboard()
         if force_lower:
             _input = _input.lower()
         _columns = _input.split()
-        self.write_clipboard("{}".format(", ".join(_columns)))
+        if sort:
+            _columns = sorted(_columns)
+        output_pattern = '"{}"' if quote else "{}"
+        join_pattern = '", "' if quote else ", "
+        self.write_clipboard(output_pattern.format(join_pattern.join(_columns)))
+
+    def logichub_tabs_to_columns(self):
+        self._split_tabs_to_columns()
 
     def logichub_tabs_to_columns_lowercase(self):
-        self.logichub_tabs_to_columns(force_lower=True)
+        self._split_tabs_to_columns(force_lower=True)
 
-    def logichub_tabs_to_columns_and_quotes(self, force_lower=False):
-        _input = BitBar.read_clipboard()
-        if force_lower:
-            _input = _input.lower()
-        _columns = _input.split()
-        self.write_clipboard('"{}"'.format('", "'.join(_columns)))
+    def logichub_tabs_to_columns_sorted(self):
+        self._split_tabs_to_columns(sort=True)
+
+    def logichub_tabs_to_columns_sorted_lowercase(self):
+        self._split_tabs_to_columns(force_lower=True, sort=True)
+
+    def logichub_tabs_to_columns_and_quotes(self):
+        self._split_tabs_to_columns(quote=True)
 
     def logichub_tabs_to_columns_and_quotes_lowercase(self):
-        self.logichub_tabs_to_columns_and_quotes(force_lower=True)
+        self._split_tabs_to_columns(quote=True, force_lower=True)
+
+    def logichub_tabs_to_columns_and_quotes_sorted(self):
+        self._split_tabs_to_columns(quote=True, sort=True)
+
+    def logichub_tabs_to_columns_and_quotes_sorted_lowercase(self):
+        self._split_tabs_to_columns(quote=True, sort=True, force_lower=True)
 
     def logichub_sql_start_from_table_name(self):
         _input = BitBar.read_clipboard()
