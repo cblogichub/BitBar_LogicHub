@@ -399,27 +399,6 @@ class BitBar:
         self.make_action("Upgrade Command with Backup Script (from milestone version in clipboard)", self.logichub_upgrade_command_from_clipboard_with_backup_script)
         self.make_action("Upgrade Command with Backup Script (static)", self.logichub_upgrade_command_static_with_backup_script, alternate=True)
 
-        # ------------ Menu Section: Networking ------------ #
-        # First check whether there are any custom networking configs (i.e. ssh tunnels or port redirects)
-        self.check_for_custom_networking_configs()
-
-        self.add_menu_section("Networking | image={} size=20 color=blue".format(self.image_to_base64_string("bitbar_menu_ssh.png")))
-
-        self.print_in_bitbar_menu("Reset")
-        self.make_action("Terminate SSH tunnels", self.action_terminate_tunnels, terminal=True)
-        self.make_action("Terminate Local Port Redirection", self.action_terminate_port_redirection, terminal=True)
-        self.make_action("Terminate All", self.action_terminate_all, terminal=True)
-
-        self.print_in_bitbar_menu("Port Redirection")
-        # If custom redirect configs are defined in logichub_tools.ini, then add actions for each
-        for _config in self.port_redirect_configs:
-            self.make_action(_config[0], self.port_redirect_custom, terminal=True, action_id=_config[1])
-
-        self.print_in_bitbar_menu("SSH Tunnels (custom)")
-        # If custom ssh configs are defined in logichub_tools.ini, then add actions for each
-        for _config in self.ssh_tunnel_configs:
-            self.make_action(_config[0], self.ssh_tunnel_custom, terminal=True, action_id=_config[1])
-
         # ------------ Menu Section: TECH ------------ #
 
         self.add_menu_section(":wrench: TECH | size=20 color=blue")
@@ -476,6 +455,28 @@ class BitBar:
         self.make_action("Text to Lowercase", self.text_make_lowercase)
         self.make_action("Trim Text in Clipboard", self.text_trim_string)
         self.make_action("Remove Text Formatting", self.text_remove_formatting)
+
+        # ------------ Menu Section: Networking ------------ #
+
+        # First check whether there are any custom networking configs (i.e. ssh tunnels or port redirects)
+        self.check_for_custom_networking_configs()
+
+        self.add_menu_section("Networking | image={} size=20 color=blue".format(self.image_to_base64_string("bitbar_menu_ssh.png")))
+
+        self.print_in_bitbar_menu("Reset")
+        self.make_action("Terminate SSH tunnels", self.action_terminate_tunnels, terminal=True)
+        self.make_action("Terminate Local Port Redirection", self.action_terminate_port_redirection, terminal=True)
+        self.make_action("Terminate All", self.action_terminate_all, terminal=True)
+
+        self.print_in_bitbar_menu("Port Redirection")
+        # If custom redirect configs are defined in logichub_tools.ini, then add actions for each
+        for _config in self.port_redirect_configs:
+            self.make_action(_config[0], self.port_redirect_custom, terminal=True, action_id=_config[1])
+
+        self.print_in_bitbar_menu("SSH Tunnels (custom)")
+        # If custom ssh configs are defined in logichub_tools.ini, then add actions for each
+        for _config in self.ssh_tunnel_configs:
+            self.make_action(_config[0], self.ssh_tunnel_custom, terminal=True, action_id=_config[1])
 
         # Lastly, attempt to get the BitBar version and print it as an FYI
         try:
