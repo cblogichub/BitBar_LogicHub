@@ -350,7 +350,17 @@ class BitBar:
         self.add_menu_divider_line(menu_depth=1)
 
         self.make_action("BETA: Spark Commands", None, text_color="blue")
+
+        # Full version of "from_json" action, which includes all nested dicts and lists
         self.make_action("from_json: Create column from JSON clipboard", self.action_spark_from_json)
+        self.make_action("from_json: allow invalid keys", self.action_spark_from_json_allow_invalid, alternate=True)
+
+        # Lightweight version of "from_json" action, which only captures root keys
+        # If a root key's value is a dict, then it will be stored as a string.
+        # If it's a list, then it will be stored as a list of strings.
+        self.make_action("from_json: no recursion", self.action_spark_from_json_non_recursive)
+        self.make_action("from_json: no recursion, allow invalid keys", self.action_spark_from_json_non_recursive_allow_invalid, alternate=True)
+
         self.make_action("schema_of_json: Create column from JSON clipboard", self.action_json_to_schema_of_json)
 
         self.print_in_bitbar_menu("Shell: Host")
@@ -848,7 +858,26 @@ class BitBar:
         else:
             return input_value
 
-    def action_spark_from_json(self):
+    def action_spark_from_json(self, recursive=True, block_invalid_keys=True):
+        def check_for_invalid_characters(input_var):
+            if not (isinstance(input_var, (dict, list))):
+                return
+            invalid_keys = []
+            if isinstance(input_var, dict):
+                for k, v in input_var.items():
+                    if re.findall(r'\W', k):
+                        invalid_keys.append(k)
+                    _invalid = check_for_invalid_characters(v)
+                    if _invalid:
+                        invalid_keys.extend(_invalid[1])
+            elif isinstance(input_var, list):
+                for v in input_var:
+                    _invalid = check_for_invalid_characters(v)
+                    if _invalid:
+                        invalid_keys.extend(_invalid[1])
+            if invalid_keys:
+                return True, list(set(invalid_keys))
+
         def format_for_spark(_input):
             types = {
                 str: "string",
@@ -879,11 +908,34 @@ class BitBar:
         # Convert json to dict or list
         json_loaded = self._json_notify_and_exit_when_invalid(manual_input=json_str)
         json_updated = BitBar._strip_json_for_spark(json_loaded)
+        if not recursive:
+            for k in list(json_updated.keys()):
+                if isinstance(json_updated[k], dict):
+                    json_updated[k] = "{}"
+                elif isinstance(json_updated[k], list):
+                    json_updated[k] = ["x"]
+        if block_invalid_keys:
+            invalid = check_for_invalid_characters(json_updated)
+            if invalid:
+                error = f"INVALID KEY IN JSON: {', '.join(invalid[1])}"
+                self.write_clipboard(f"\n***** {error} *****\n\n", skip_notification=True)
+                self.display_notification_error(error)
+                return
+
         try:
             _output = f"FROM_JSON(COLUMN_NAME, '{format_for_spark(json_updated)}') AS NEW_COLUMN_NAME"
         except TypeError as e:
             _output = str(e)
         self.write_clipboard(_output)
+
+    def action_spark_from_json_allow_invalid(self):
+        self.action_spark_from_json(block_invalid_keys=False)
+
+    def action_spark_from_json_non_recursive(self):
+        self.action_spark_from_json(recursive=False)
+
+    def action_spark_from_json_non_recursive_allow_invalid(self):
+        self.action_spark_from_json(recursive=False, block_invalid_keys=False)
 
     def action_json_to_schema_of_json(self):
         # Read clipboard, but drop single quotes if any are found
