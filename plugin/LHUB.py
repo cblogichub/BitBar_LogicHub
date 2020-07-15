@@ -522,9 +522,10 @@ class BitBar:
         # subprocess.call(["osascript", "-e", f'display notification "{content}" with title "{title}"'])
         _output = os.popen(f'osascript -e "display notification \\"{content}\\" with title \\"{title}\\""')
 
-    def display_notification_error(self, content, title=None, print_stderr=False):
+    def display_notification_error(self, content, title=None, print_stderr=False, error_prefix="Failed with error: "):
+        error_prefix = error_prefix if error_prefix and isinstance(error_prefix, str) else ""
         _output = os.popen('osascript -e "beep"')
-        _error = f"Failed with error: {content}"
+        _error = f"{error_prefix}{content}"
         if print_stderr:
             print(f"\n{_error}\n")
         self.display_notification(_error, title)
