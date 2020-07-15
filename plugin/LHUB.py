@@ -19,6 +19,7 @@ import sys
 from collections import namedtuple
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
+import traceback
 
 import clipboard
 
@@ -536,7 +537,20 @@ class BitBar:
             self.bitbar_menu_output += "\n"
         self.bitbar_menu_output += msg
 
-    def fail_with_exception(self, msg):
+    def fail_action_with_exception(self, trace: traceback.format_exc = None, exception: BaseException = None, print_stderr=False):
+        if not trace:
+            trace = traceback.format_exc()
+        self.write_clipboard(trace, skip_notification=True)
+        error_msg = "Failed with an exception"
+        if exception and isinstance(exception, BaseException):
+            error_msg += f" ({type(exception).__name__})"
+        error_msg += ": check traceback in clipboard"
+        if exception:
+            error_msg = f"Failed with an exception ({type(exception).__name__}): check traceback in clipboard"
+        self.display_notification_error(error_msg, error_prefix="", print_stderr=print_stderr)
+
+    # ToDo Finish: catch exceptions when printing the menu and gracefully handle the exception/traceback
+    def fail_with_exception_old(self, msg):
         self.print_in_bitbar_menu('LHUB_FAIL| color=red\n---')
         self.print_in_bitbar_menu(f'FAILED: {msg}| color=red')
         try:
@@ -1681,10 +1695,14 @@ check_recent_user_activity
         if not action:
             self.print_bitbar_menu_output()
         else:
-            try:
-                self.action_list[action].action()
-            except KeyError:
+            if action not in self.action_list:
                 raise Exception("Not a valid action")
+            else:
+                try:
+                    self.action_list[action].action()
+                except Exception as err:
+                    # self.fail_action_with_exception(traceback.format_exc())
+                    self.fail_action_with_exception(exception=err)
 
 
 log = Log()
