@@ -836,12 +836,14 @@ class BitBar:
 
     @staticmethod
     def _strip_json_for_spark(input_value):
+        # Spark's "schema_of_json" defines the data type as null if a string is completely empty,
+        # so return "x" for strings so that there is always exactly 1 character in all strings
         if input_value is None:
             # If nulls are present, assume that they're strings
             return "x"
         elif isinstance(input_value, list):
             # First drop null values from the list
-            input_value = [x for x in input_value if x]
+            input_value = [x for x in input_value if x is not None]
             if not input_value:
                 # If a list is empty, assume that it's a list of strings
                 return ["x"]
