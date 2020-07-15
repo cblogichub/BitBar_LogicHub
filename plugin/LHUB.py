@@ -600,9 +600,9 @@ class BitBar:
             clip = clip.strip()
         return clip
 
-    def write_clipboard(self, text):
+    def write_clipboard(self, text, skip_notification=False):
         clipboard.copy(text)
-        if self.config.clipboard_update_notifications:
+        if self.config.clipboard_update_notifications and not skip_notification:
             self.display_notification("Clipboard updated")
 
     def copy_file_contents_to_clipboard(self, file_path, file_name=None):
