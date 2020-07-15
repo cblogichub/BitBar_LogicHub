@@ -835,7 +835,7 @@ class BitBar:
         self.write_clipboard(f'file:///opt/docker/data/service/event_files/')
 
     @staticmethod
-    def _strip_json_for_spark(input_value):
+    def _strip_json_for_spark(input_value, shorten_lists=False):
         # Spark's "schema_of_json" defines the data type as null if a string is completely empty,
         # so return "x" for strings so that there is always exactly 1 character in all strings
         if input_value is None:
@@ -848,13 +848,23 @@ class BitBar:
                 # If a list is empty, assume that it's a list of strings
                 return ["x"]
             else:
-                # If a list has values, just return a list of only the first value
-                return [BitBar._strip_json_for_spark(input_value[0])]
+                # If a list has values...
+                if isinstance(input_value[0], dict) and not shorten_lists:
+                    # if the first value is a dict, and if shorten_lists is not enabled, process all entries
+                    # But ensure that all other entries are dicts too
+                    return [BitBar._strip_json_for_spark(value, shorten_lists=shorten_lists) for value in input_value if isinstance(value, dict)]
+                else:
+                    # If shorten_lists is enabled, just return a list of only the first value
+                    # Also, since Spark's complex data types assume that everything in an
+                    # array is the same data type, then just return the first value
+                    # if its data type is anything other than a dict
+                    return [BitBar._strip_json_for_spark(input_value[0], shorten_lists=shorten_lists)]
+
         elif isinstance(input_value, dict):
             # Workaround: If a dict is empty, then schema_of_json will say it's a struct without keys, so make it a string instead
             if not input_value:
                 return "{}"
-            return {k: BitBar._strip_json_for_spark(v) for k, v in input_value.items()}
+            return {k: BitBar._strip_json_for_spark(v, shorten_lists=shorten_lists) for k, v in input_value.items()}
         elif type(input_value) is str:
             return "x"
         else:
@@ -909,7 +919,7 @@ class BitBar:
         json_str = self.read_clipboard().replace("'", "")
         # Convert json to dict or list
         json_loaded = self._json_notify_and_exit_when_invalid(manual_input=json_str)
-        json_updated = BitBar._strip_json_for_spark(json_loaded)
+        json_updated = BitBar._strip_json_for_spark(json_loaded, shorten_lists=True)
         if not recursive:
             for k in list(json_updated.keys()):
                 if isinstance(json_updated[k], dict):
