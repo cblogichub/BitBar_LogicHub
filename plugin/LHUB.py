@@ -20,8 +20,10 @@ from collections import namedtuple
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 import traceback
+from numbers import Number
 
 import clipboard
+import collections.abc
 
 # Global static variables
 user_config_file = "logichub_tools.ini"
@@ -52,7 +54,8 @@ class Reusable:
         Reusable method to standardize CLI calls
 
         :param cmd: Command to execute (can be string or list)
-        :param cmd: Timeout in seconds (default 30)
+        :param timeout: Timeout in seconds (default 30)
+        :type timeout: int or None
         :param bool test: Whether to test that the command completed successfully (default True)
         :param bool capture_output: Whether to capture the output or allow it to pass to the terminal. (Usually True, but False for things like prompting for the sudo password)
         :return:
@@ -92,6 +95,8 @@ class Reusable:
         # or
         # import os
         # os.popen("full command string")
+        if isinstance(timeout, Number) and timeout <= 0:
+            timeout = None
         log.debug(f"Executing command: {cmd}")
         _cmd = _validate_command(cmd)
         _result = subprocess.run(_cmd, capture_output=capture_output, universal_newlines=True, timeout=timeout)
@@ -116,7 +121,7 @@ class Reusable:
     def do_prompt_for_sudo():
         # If a sudo session is not already active, auth for sudo and start the clock.
         # This function can be called as many times as desired to and will not cause re-prompting unless the timeout has been exceeded.
-        _ = Reusable.run_cli_command('sudo -v -p "sudo password: "', timeout=None, test=True, capture_output=False)
+        _ = Reusable.run_cli_command('sudo -v -p "sudo password: "', timeout=-1, test=True, capture_output=False)
 
     @staticmethod
     def convert_boolean(_var):
@@ -127,6 +132,40 @@ class Reusable:
             elif _var2 in ["no", "false"]:
                 return False
         return _var
+
+    @staticmethod
+    def dict_merge(*args, add_keys=True):
+        """
+        Deep (recursive) merge for dicts, because dict.update() only merges
+        top-level keys. This version makes a copy of the original dict so that the
+        original remains unmodified.
+
+        The optional argument ``add_keys``, determines whether keys which are
+        present in ``merge_dict`` but not ``dct`` should be included in the
+        new dict. It also merges list entries instead of overwriting with a new list.
+        """
+        assert len(args) >= 2, "dict_merge requires at least two dicts to merge"
+        rtn_dct = args[0].copy()
+        merge_dicts = args[1:]
+        for merge_dct in merge_dicts:
+            if add_keys is False:
+                merge_dct = {key: merge_dct[key] for key in set(rtn_dct).intersection(set(merge_dct))}
+            for k, v in merge_dct.items():
+                if not rtn_dct.get(k):
+                    rtn_dct[k] = v
+                elif v is None:
+                    pass
+                elif k in rtn_dct and type(v) != type(rtn_dct[k]):
+                    raise TypeError(f"Overlapping keys exist with different types: original is {type(rtn_dct[k])}, new value is {type(v)}")
+                elif isinstance(rtn_dct[k], dict) and isinstance(merge_dct[k], collections.abc.Mapping):
+                    rtn_dct[k] = Reusable.dict_merge(rtn_dct[k], merge_dct[k], add_keys=add_keys)
+                elif isinstance(v, list):
+                    for list_value in v:
+                        if list_value not in rtn_dct[k]:
+                            rtn_dct[k].append(list_value)
+                else:
+                    rtn_dct[k] = v
+        return rtn_dct
 
 
 @dataclass_json
@@ -349,11 +388,11 @@ class BitBar:
 
         self.add_menu_divider_line(menu_depth=1)
 
-        self.make_action("BETA: Spark Commands", None, text_color="blue")
+        self.make_action("BETA: Spark Commands (from clipboard)", None, text_color="blue")
 
         # Full version of "from_json" action, which includes all nested dicts and lists
-        self.make_action("from_json: Create column from JSON clipboard", self.action_spark_from_json)
-        self.make_action("from_json: allow invalid keys", self.action_spark_from_json_allow_invalid, alternate=True)
+        self.make_action("from_json: full", self.action_spark_from_json)
+        self.make_action("from_json: full, allow invalid keys", self.action_spark_from_json_allow_invalid, alternate=True)
 
         # Lightweight version of "from_json" action, which only captures root keys
         # If a root key's value is a dict, then it will be stored as a string.
@@ -835,44 +874,127 @@ class BitBar:
         self.write_clipboard(f'file:///opt/docker/data/service/event_files/')
 
     @staticmethod
-    def _strip_json_for_spark(input_value, shorten_lists=False):
-        # Spark's "schema_of_json" defines the data type as null if a string is completely empty,
-        # so return "x" for strings so that there is always exactly 1 character in all strings
-        if input_value is None:
-            # If nulls are present, assume that they're strings
-            return "x"
-        elif isinstance(input_value, list):
-            # First drop null values from the list
-            input_value = [x for x in input_value if x is not None]
-            if not input_value:
-                # If a list is empty, assume that it's a list of strings
-                return ["x"]
-            else:
-                # If a list has values...
-                if isinstance(input_value[0], dict) and not shorten_lists:
-                    # if the first value is a dict, and if shorten_lists is not enabled, process all entries
-                    # But ensure that all other entries are dicts too
-                    return [BitBar._strip_json_for_spark(value, shorten_lists=shorten_lists) for value in input_value if isinstance(value, dict)]
+    def _strip_json_for_spark(input_value, replace_nones=True):
+        def run_strip(obj):
+            # Spark's "schema_of_json" defines the data type as null if a string is completely empty,
+            # so return "x" for strings so that there is always exactly 1 character in all strings
+            if obj is None or isinstance(obj, str):
+                # If nulls are present, or if it's already just a string, then return a single character string
+                return "x"
+            elif type(obj) is bool:
+                return obj
+            elif isinstance(obj, Number):
+                if type(obj) is int:
+                    return 1
                 else:
-                    # If shorten_lists is enabled, just return a list of only the first value
-                    # Also, since Spark's complex data types assume that everything in an
-                    # array is the same data type, then just return the first value
-                    # if its data type is anything other than a dict
-                    return [BitBar._strip_json_for_spark(input_value[0], shorten_lists=shorten_lists)]
+                    return float(1.1)
 
-        elif isinstance(input_value, dict):
-            # Workaround: If a dict is empty, then schema_of_json will say it's a struct without keys, so make it a string instead
-            if not input_value:
-                return "{}"
-            return {k: BitBar._strip_json_for_spark(v, shorten_lists=shorten_lists) for k, v in input_value.items()}
-        elif type(input_value) is str:
-            return "x"
-        else:
-            return input_value
+            elif isinstance(obj, list):
+                # First drop null values from the list
+                obj = [x for x in obj if x is not None]
+                if not obj:
+                    # If a list is empty, assume that it's a list of strings
+                    return ["x"]
+
+                # Spark is less forgiving than json.loads, so determine the best type to use if there is a mix of types
+                single_value = obj[0]
+                for value in obj:
+                    if type(single_value) is str or type(value) is str:
+                        # If any value in the list is a string, then just return a list of a single string entry so all will be read as strings
+                        return ["x"]
+                    elif type(single_value) is not type(value):
+                        # If there is any difference in type between entries, determine which type to use
+                        if isinstance(single_value, Number) and isinstance(value, Number):
+                            # If both are numeric then just stick with a float
+                            if type(single_value) is not float:
+                                single_value = float(1.1)
+                        else:
+                            # If there is any other kind of mismatch other than numeric types, then force it to be a string.
+                            # JSON & Python will allow a list to contain a mix of types (such as lists, dicts, numbers, etc.),
+                            # but Spark insists on arrays having a common type.
+                            return ["x"]
+
+                # If it's made it this far, then the types are at least consistent. Now we just need to shorten/flatten.
+                if type(single_value) is int:
+                    # For int, shorten to just 1
+                    return 1
+                elif type(single_value) is float:
+                    # for float, shorten to just 1.1
+                    return float(1.1)
+                elif not isinstance(single_value, (list, dict)):
+                    # In case I've overlooked any other types, then as long as the values are lists or dicts then just return as-is
+                    return single_value
+                elif isinstance(single_value, list):
+                    # This is just a best-effort feature, so if it's a list of lists by this point, then just return with one list entry containing just one string
+                    return [["x"]]
+                elif isinstance(single_value, dict):
+                    if len(obj) == 1:
+                        # If there's only one dict present, then run the one entry back through on its own and then return a list with that single entry
+                        return [run_strip(obj[0])]
+                    else:
+                        # If it's made it this far, then it's a list containing multiple dicts, so merge all of the dicts recursively, and then run the single dict back through the function
+                        return [run_strip(Reusable.dict_merge(*obj))]
+                else:
+                    raise TypeError("Unknown Error: Should never actually reach this point")
+
+            elif isinstance(obj, dict):
+                # Workaround: If a dict is empty, then schema_of_json will say it's a struct without keys (or just fail), so make it a string instead
+                if not obj:
+                    return "{}"
+                return {k: run_strip(v) for k, v in obj.items()}
+
+            else:
+                # Just in case there are any types not covered by this point, return as-is
+                return obj
+
+        def replace_none_values(obj):
+            pass
+            return obj
+
+        input_value = run_strip(input_value)
+        if replace_nones:
+            input_value = replace_none_values(input_value)
+
+        return input_value
+
+    # ToDo Old version: delete once I'm confident in the new version above.
+    # @staticmethod
+    # def _strip_json_for_spark(input_value, shorten_lists=False):
+    #     # Spark's "schema_of_json" defines the data type as null if a string is completely empty,
+    #     # so return "x" for strings so that there is always exactly 1 character in all strings
+    #     if input_value is None or isinstance(input_value, str):
+    #         # If nulls are present, or if it's already just a string, then return a single character string
+    #         return "x"
+    #     elif isinstance(input_value, list):
+    #         # First drop null values from the list
+    #         input_value = [x for x in input_value if x is not None]
+    #         if not input_value:
+    #             # If a list is empty, assume that it's a list of strings
+    #             return ["x"]
+    #         else:
+    #             # If a list has values...
+    #             if isinstance(input_value[0], dict) and not shorten_lists:
+    #                 # if the first value is a dict, and if shorten_lists is not enabled, process all entries
+    #                 # But ensure that all other entries are dicts too
+    #                 return [BitBar._strip_json_for_spark(value, shorten_lists=shorten_lists) for value in input_value if isinstance(value, dict)]
+    #             else:
+    #                 # If shorten_lists is enabled, just return a list of only the first value
+    #                 # Also, since Spark's complex data types assume that everything in an
+    #                 # array is the same data type, then just return the first value
+    #                 # if its data type is anything other than a dict
+    #                 return [BitBar._strip_json_for_spark(input_value[0], shorten_lists=shorten_lists)]
+    # 
+    #     elif isinstance(input_value, dict):
+    #         # Workaround: If a dict is empty, then schema_of_json will say it's a struct without keys (or just fail), so make it a string instead
+    #         if not input_value:
+    #             return "{}"
+    #         return {k: BitBar._strip_json_for_spark(v, shorten_lists=shorten_lists) for k, v in input_value.items()}
+    #     else:
+    #         return input_value
 
     def action_spark_from_json(self, recursive=True, block_invalid_keys=True):
         def check_for_invalid_characters(input_var):
-            if not (isinstance(input_var, (dict, list))):
+            if not isinstance(input_var, (dict, list)):
                 return
             invalid_keys = []
             if isinstance(input_var, dict):
@@ -889,6 +1011,19 @@ class BitBar:
                         invalid_keys.extend(_invalid[1])
             if invalid_keys:
                 return True, list(set(invalid_keys))
+
+        def flatten(obj):
+            if not isinstance(obj, (dict, list)):
+                return obj
+            elif isinstance(obj, list):
+                return [flatten(x) for x in obj]
+            else:
+                for k in list(obj.keys()):
+                    if isinstance(obj[k], dict):
+                        obj[k] = "{}"
+                    elif isinstance(obj[k], list):
+                        obj[k] = ["x"]
+                return obj
 
         def format_for_spark(_input):
             types = {
@@ -919,13 +1054,9 @@ class BitBar:
         json_str = self.read_clipboard().replace("'", "")
         # Convert json to dict or list
         json_loaded = self._json_notify_and_exit_when_invalid(manual_input=json_str)
-        json_updated = BitBar._strip_json_for_spark(json_loaded, shorten_lists=True)
+        json_updated = BitBar._strip_json_for_spark(json_loaded)
         if not recursive:
-            for k in list(json_updated.keys()):
-                if isinstance(json_updated[k], dict):
-                    json_updated[k] = "{}"
-                elif isinstance(json_updated[k], list):
-                    json_updated[k] = ["x"]
+            json_updated = flatten(json_updated)
         if block_invalid_keys:
             invalid = check_for_invalid_characters(json_updated)
             if invalid:
@@ -938,6 +1069,7 @@ class BitBar:
             _output = f"FROM_JSON(COLUMN_NAME, '{format_for_spark(json_updated)}') AS NEW_COLUMN_NAME"
         except TypeError as e:
             _output = str(e)
+            self.fail_action_with_exception(exception=e)
         self.write_clipboard(_output)
 
     def action_spark_from_json_allow_invalid(self):
