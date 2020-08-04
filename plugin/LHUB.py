@@ -1454,9 +1454,6 @@ check_recent_user_activity
         :param config_dict: dict containing SSH tunnel parameters
         :return:
         """
-        # Validate sudo session
-        Reusable.do_prompt_for_sudo()
-
         ssh_config_name = config_dict.get("name")
         remote_address = config_dict.get("remote_ip")
         remote_port = config_dict.get("remote_port")
@@ -1505,7 +1502,12 @@ check_recent_user_activity
 
         # Define the SSH command
         #   * must use sudo in case the local port is below 1024
-        ssh_command = f"sudo ssh {ssh_options} -Y -L {local_address}:{local_port}:{remote_address}:{remote_port} -N -f {ssh_user}@{ssh_server_address} -p {ssh_server_port}"
+        ssh_command = f"ssh {ssh_options} -Y -L {local_address}:{local_port}:{remote_address}:{remote_port} -N -f {ssh_user}@{ssh_server_address} -p {ssh_server_port}"
+
+        if int(local_port) <= 1023:
+            # Validate sudo session
+            Reusable.do_prompt_for_sudo()
+            ssh_command = f"sudo {ssh_command}"
 
         print(f"Executing command:\n\n    {ssh_command}\n")
 
