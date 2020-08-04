@@ -1468,10 +1468,14 @@ check_recent_user_activity
         # Ensure that required parameters are present
         assert ssh_config_name, "Error: SSH config must be given a name"
         assert ssh_server_address, "Error: SSH server address not provided"
+        assert ssh_server_port, "Error: SSH port for SSH tunnel not provided"
+        assert int(ssh_server_port), "Error: SSH port for SSH tunnel is not a number"
         assert remote_address, "Error: Remote address for SSH tunnel not provided"
         assert remote_port, "Error: Remote port for SSH tunnel not provided"
+        assert int(remote_port), "Error: Remote port for SSH tunnel is not a number"
         assert local_address, "Error: Loopback address not provided"
         assert local_port, "Error: Loopback port not provided"
+        assert int(local_port), "Error: Loopback port for SSH tunnel is not a number"
 
         # If the SSH server address is a loopback IP (like when tunneling over another tunnel, such as Bomgar tunnel jumps)
         # Make sure the server port is not left at 22. Otherwise a tunnel to your own machine will be created and won't work.
