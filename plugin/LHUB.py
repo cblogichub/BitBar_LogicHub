@@ -1066,7 +1066,7 @@ class BitBar:
                 return
 
         try:
-            _output = f"FROM_JSON(COLUMN_NAME, '{format_for_spark(json_updated)}') AS NEW_COLUMN_NAME"
+            _output = f"FROM_JSON(result, '{format_for_spark(json_updated)}') AS result_struct"
         except TypeError as e:
             _output = str(e)
             self.fail_action_with_exception(exception=e)
