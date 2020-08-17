@@ -174,12 +174,12 @@ run_backups() {
     docker exec -it service rm -rf "${service_backup_dir_full}" "${service_backup_file}"
 
     new_file_python_modules="logichub_backup_installed_python_modules.txt"
-    print_color --nocolorbold "\nGenerating: db${new_file_python_modules}"
+    print_color --nocolorbold "\nGenerating: ${new_file_python_modules}"
     docker exec -it service pip list > "${new_dir}/${new_file_python_modules}"
     ls -l "${new_dir}/${new_file_python_modules}"
 
     new_file_service_bash_history="logichub_backup_service_root_bash_history.txt"
-    print_color --nocolorbold "\nGenerating: db${new_file_service_bash_history}"
+    print_color --nocolorbold "\nGenerating: ${new_file_service_bash_history}"
     docker exec -it service cat /root/.bash_history > "${new_dir}/${new_file_service_bash_history}"
     ls -l "${new_dir}/${new_file_service_bash_history}"
 
@@ -196,24 +196,24 @@ run_backups() {
     print_color -h "Postgres Database"
 
     new_file_db_dump="logichub_backup_data_dump.psql"
-    print_color --nocolorbold "Generating: db${new_file_db_dump}"
+    print_color --nocolorbold "Generating: ${new_file_db_dump}"
     docker exec -it postgres pg_dump --username daemon -d lh > "${new_dir}/${new_file_db_dump}"
     ls -l "${new_dir}/${new_file_db_dump}"
 
     new_file_lh_users="db-users.txt"
-    print_color --nocolorbold  "\nGenerating: db${new_file_lh_users}"
+    print_color --nocolorbold  "\nGenerating: ${new_file_lh_users}"
     docker exec -it postgres psql -P pager --u daemon lh -c "select * from users;" > "${new_dir}/${new_file_lh_users}"
     ls -l "${new_dir}/${new_file_lh_users}"
 
     print_color -h "Integrations"
 
     new_file_integration_instances="db-integration_instances.txt"
-    print_color --nocolorbold "Generating: db${new_file_integration_instances}"
+    print_color --nocolorbold "Generating: ${new_file_integration_instances}"
     docker exec -it postgres psql -P pager --u daemon lh -c "select * from integration_instances;" > "${new_dir}/${new_file_integration_instances}"
     ls -l "${new_dir}/${new_file_integration_instances}"
 
     new_file_integration_descriptors="db-integration_descriptors.txt"
-    print_color --nocolorbold "\nGenerating: db${new_file_integration_descriptors}"
+    print_color --nocolorbold "\nGenerating: ${new_file_integration_descriptors}"
     docker exec -it postgres psql -P pager --u daemon lh -c "select * from integration_descriptors;" > "${new_dir}/${new_file_integration_descriptors}"
     ls -l "${new_dir}/${new_file_integration_descriptors}"
 
