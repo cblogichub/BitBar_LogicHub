@@ -3,15 +3,26 @@ BitBar plugin with handy features for frequent LogicHub users
 
 # Required Software
 * BitBar (obviously): https://getbitbar.com/
+* git (install via brew)
 * Python 3.6+ (must resolve via /usr/local/bin/python3)
 
 # Required Python Packages
 The following Python packages are required. (See requirements.txt for exact versions)
+
 * clipboard
 * configparser
 * sqlparse
 * configobj
 * dataclasses-json
+
+Note: since these packages must be installed for whatever installation of 
+Python3 resolves from /usr/local/bin/python3, you may run into errors when just 
+running "pip install" or "pip3 install" from its default location. In those 
+cases you may need to provide the target location to install the package, like 
+this:
+
+`pip3 install --target /usr/local/lib/python3.7/site-packages <package_name>`
+
 
 # Installation
 1. Ensure that the requirements above are met
