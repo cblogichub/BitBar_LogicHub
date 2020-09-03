@@ -5,6 +5,24 @@
 # Run this to take additional backups for due diligence beyond LogicHub's built-in backup script
 
 
+process_input() {
+    no_logs="false"
+    delete_dir="false"
+    while true; do
+        if [[ -z "$1" ]]; then
+            break
+        elif [[ "$1" == "--no-logs" ]]; then
+            no_logs="true"
+        elif [[ "$1" == "--delete-dir" ]]; then
+            delete_dir="true"
+        else
+            print_color -red "ERROR: New param called $1; aborting...\n"
+            return
+        fi
+        shift
+    done
+}
+
 print_color() {
     newline='\n'
     header=''
@@ -70,21 +88,7 @@ function trim {
 }
 
 run_backups() {
-    no_logs="false"
-    delete_dir="false"
-    while true; do
-        if [[ -z "$1" ]]; then
-            break
-        elif [[ "$1" == "--no-logs" ]]; then
-            no_logs="true"
-        elif [[ "$1" == "--delete-dir" ]]; then
-            delete_dir="true"
-        else
-            print_color -red "ERROR: New param called $1; aborting...\n"
-            return
-        fi
-        shift
-    done
+    process_input "$@"
 
     make_vars
 
