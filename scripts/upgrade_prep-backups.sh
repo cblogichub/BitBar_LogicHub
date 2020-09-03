@@ -233,4 +233,4 @@ run_backups() {
 
 }
 
-run_backups
+run_backups "$@"
