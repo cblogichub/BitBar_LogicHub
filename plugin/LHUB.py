@@ -24,6 +24,8 @@ from numbers import Number
 
 import clipboard
 import collections.abc
+import psutil
+
 
 # Global static variables
 user_config_file = "logichub_tools.ini"
@@ -171,8 +173,8 @@ class Reusable:
 @dataclass_json
 @dataclass
 class ConfigMain:
-    # Path to the BitBar repo. No default here, as this is a required field.
-    bitbar_repo_path: str
+    # Path to the code repo. No default here, as this is a required field.
+    repo_path: str
 
     # Local user ID. If not provided, user will be drawn from USER environment variable
     local_user: str
@@ -189,15 +191,12 @@ class ConfigMain:
     # Usually "lo0"
     default_loopback_interface: str
 
-
-@dataclass_json
-@dataclass
-class ConfigBitBar:
     # Define how this plugin should appear in the status bar
     # Options: logo, text, both, custom
     status_bar_style: str
 
-    # Text for the BitBar plugin label (not used if status_bar_style is set to logo)
+    # Text for the notification label (not used if status_bar_style is set to logo)
+    # Default is "LHUB"
     # If status_bar_style is set to "custom", you can specify additional formatting criteria according to BitBar's plugin API
     status_bar_label: str
 
@@ -219,14 +218,14 @@ class ConfigBitBar:
 
 @dataclass_json
 @dataclass
-class ConfigBitBarNetworking:
+class ConfigMenuNetworking:
     configs: dict
 
 
 # ToDo Finish this new feature
 @dataclass_json
 @dataclass
-class ConfigBitBarCustom:
+class ConfigMenuCustom:
     def __post_init__(self):
         pass
 
@@ -235,12 +234,11 @@ class ConfigBitBarCustom:
 @dataclass
 class Config:
     main: ConfigMain = None
-    BitBar: ConfigBitBar = None
-    BitBar_custom: ConfigBitBarCustom = None
-    BitBar_networking: ConfigBitBarNetworking = None
+    menu_custom: ConfigMenuCustom = None
+    menu_networking: ConfigMenuNetworking = None
 
     def __post_init__(self):
-        config_sections = ["main", "BitBar", "BitBar_networking", "BitBar_custom"]
+        config_sections = ["main", "menu_networking", "menu_custom"]
 
         # initialize a config obj for the user's logichub_tools.ini file
         self.user_settings_dict = configobj.ConfigObj(os.path.join(os.environ.get("HOME"), user_config_file))
@@ -252,21 +250,20 @@ class Config:
                 if k not in self.user_settings_dict:
                     self.user_settings_dict[k] = {}
 
-        self.get_config_main(**self.user_settings_dict["main"])
-        if not self.main.bitbar_repo_path:
-            print("bitbar_repo_path not set in logichub_tools.ini")
+        self.get_config_main(**self.user_settings_dict.get("main", {}))
+        if self.main.debug_output_enabled:
+            global debug_enabled
+            debug_enabled = self.main.debug_output_enabled
+
+        if not self.main.repo_path:
+            print("repo_path not set in logichub_tools.ini")
             sys.exit(1)
 
-        self.get_config_bitbar_params(**self.user_settings_dict["BitBar"])
-        self.get_config_bitbar_networking_params(**self.user_settings_dict["BitBar_networking"])
-        self.BitBar_custom = ConfigBitBarCustom()
+        self.get_config_menu_networking_params(**self.user_settings_dict.get("menu_networking", {}))
+        self.menu_custom = ConfigMenuCustom()
 
         # Find the path to the home directory
         self.dir_user_home = os.environ.get("HOME")
-
-        # initialize a config obj for the user's logichub_tools.ini file
-        user_config_file_path = os.path.join(self.dir_user_home, user_config_file)
-        user_settings = configobj.ConfigObj(user_config_file_path)
 
         self.default_loopback_interface = self.main.default_loopback_interface
         self.local_user = self.main.local_user
@@ -274,8 +271,7 @@ class Config:
         if "/" not in self.default_ssh_key:
             self.default_ssh_key = os.path.join(self.dir_user_home, ".ssh", self.default_ssh_key)
 
-        self.debug_enabled = self.BitBar.debug_output_enabled
-        self.dir_internal_tools = self.main.bitbar_repo_path
+        self.dir_internal_tools = self.main.repo_path
         self.dir_supporting_scripts = os.path.join(self.dir_internal_tools, "scripts")
         self.image_file_path = os.path.join(self.dir_internal_tools, 'supporting_files/images')
 
@@ -291,26 +287,16 @@ class Config:
                 "xl": "bitbar_status_xlarge.png",
             }
         }
-        self.status_bar_logo = logos_by_os_theme[self.main.os_theme][self.BitBar.status_bar_icon_size]
-
-        self.status_bar_style = self.BitBar.status_bar_style
-        self.status_bar_label = self.BitBar.status_bar_label
-        self.status_bar_text_color = self.BitBar.status_bar_text_color
-        self.clipboard_update_notifications = self.BitBar.clipboard_update_notifications
-        self.jira_default_prefix = self.BitBar.jira_default_prefix
+        self.status_bar_logo = logos_by_os_theme[self.main.os_theme][self.main.status_bar_icon_size]
 
     def get_config_main(self, **kwargs):
         self.main = ConfigMain(
-            bitbar_repo_path=kwargs.get("bitbar_repo_path", None),
+            repo_path=kwargs.get("repo_path", None),
             local_user=kwargs.get("local_user", os.environ.get("USER")),
             ssh_user=kwargs.get("ssh_user", os.environ.get("USER")),
             ssh_key=kwargs.get("ssh_key", "id_rsa"),
             os_theme=kwargs.get("os_theme", os.popen('defaults read -g AppleInterfaceStyle 2> /dev/null').read().strip() or "Light"),
-            default_loopback_interface=kwargs.get("default_loopback_interface", "lo0")
-        )
-
-    def get_config_bitbar_params(self, **kwargs):
-        self.BitBar = ConfigBitBar(
+            default_loopback_interface=kwargs.get("default_loopback_interface", "lo0"),
             status_bar_style=kwargs.get("status_bar_style", "logo"),
             status_bar_label=kwargs.get("status_bar_label", "LHUB"),
             status_bar_icon_size=kwargs.get("status_bar_icon_size", "large"),
@@ -320,18 +306,25 @@ class Config:
             jira_default_prefix=kwargs.get("jira_default_prefix", "LHUB")
         )
 
-    def get_config_bitbar_networking_params(self, **kwargs):
-        self.BitBar_networking = ConfigBitBarNetworking(kwargs)
+    def get_config_menu_networking_params(self, **kwargs):
+        self.menu_networking = ConfigMenuNetworking(kwargs)
 
 
-class BitBar:
+class Actions:
+    # Static items
+    loopback_interface = None
+
+    # Defaults
     ssh_tunnel_configs = []
     port_redirect_configs = []
 
-    def __init__(self):
-        self.title_default = "LogicHub_Utils"
-        self.title_json = "JsonUtils"
-        self.notification_json_invalid = 'Invalid JSON !!!!!!!!!!'
+    def __init__(self, config):
+        me = psutil.Process()
+        parent = psutil.Process(me.ppid())
+        self.parent = parent.name()
+        self.menu_type = 'BitBar' if self.parent == 'BitBar' else 'pystray'
+
+        self.title_default = "LogicHub Helpers"
         self.script_name = sys.argv[0]
         self.status = ""
         self.bitbar_menu_output = ""
@@ -340,11 +333,8 @@ class BitBar:
         self.url_uws = r"https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID={}"
         self.url_nmap = r"https://nmap.org/nsedoc/scripts/{}"
 
-        self.config = Config()
+        self.config = config
 
-        if self.config.debug_enabled:
-            global debug_enabled
-            debug_enabled = self.config.debug_enabled
         self.set_status_bar_display()
         self.loopback_interface = self.config.default_loopback_interface
 
@@ -528,15 +518,18 @@ class BitBar:
         for _config in self.ssh_tunnel_configs:
             self.make_action(_config[0], self.ssh_tunnel_custom, terminal=True, action_id=_config[1])
 
-        # Lastly, attempt to get the BitBar version and print it as an FYI
-        try:
-            with open("/Applications/BitBar.app/Contents/Info.plist", "r") as app_file:
-                _app_info = app_file.read()
-                bitbar_version = re.findall('<key>CFBundleVersion<.*\s+<string>(.*?)</string>', _app_info)[0]
-                if bitbar_version:
-                    self.print_in_bitbar_menu(f"---\nBitBar version: {bitbar_version}")
-        except:
-            pass
+        self.print_in_bitbar_menu(f"---")
+        self.print_in_bitbar_menu(f"Parent: {self.parent}")
+        if self.menu_type == 'BitBar':
+            # Lastly, attempt to get the BitBar version and print it as an FYI
+            try:
+                with open("/Applications/BitBar.app/Contents/Info.plist", "r") as app_file:
+                    _app_info = app_file.read()
+                    bitbar_version = re.findall('<key>CFBundleVersion<.*\s+<string>(.*?)</string>', _app_info)[0]
+                    if bitbar_version:
+                        self.print_in_bitbar_menu(f"BitBar version: {bitbar_version}")
+            except:
+                pass
 
     def add_menu_section(self, label, menu_depth=0):
         """
@@ -560,7 +553,7 @@ class BitBar:
         self.print_in_bitbar_menu(_divider_line)
 
     def print_bitbar_menu_output(self):
-        print(self.bitbar_menu_output)
+        print(self.bitbar_menu_output.strip())
 
     ############################################################################
     # Reusable functions
@@ -582,9 +575,7 @@ class BitBar:
         sys.exit(1)
 
     def print_in_bitbar_menu(self, msg):
-        if self.bitbar_menu_output:
-            self.bitbar_menu_output += "\n"
-        self.bitbar_menu_output += msg
+        self.bitbar_menu_output += f"{msg}\n"
 
     def fail_action_with_exception(self, trace: traceback.format_exc = None, exception: BaseException = None, print_stderr=False):
         if not trace:
@@ -618,15 +609,15 @@ class BitBar:
 
     def set_status_bar_display(self):
         # Ignore status_bar_label is status_bar_style is only the logo
-        status_bar_label = "" if self.config.status_bar_style == "logo" else self.config.status_bar_label
+        status_bar_label = "" if self.config.main.status_bar_style == "logo" else self.config.main.status_bar_label
         # If the status bar style is "custom," then whatever is passed in status_bar_label is the final product
-        if self.config.status_bar_style != "custom":
+        if self.config.main.status_bar_style != "custom":
             status_bar_label += "|"
-            if self.config.status_bar_style in ["logo", "both"]:
+            if self.config.main.status_bar_style in ["logo", "both"]:
                 logo = self.image_to_base64_string(self.config.status_bar_logo)
                 status_bar_label += f" image={logo}"
-            if self.config.status_bar_style in ["text", "both"]:
-                status_bar_label += f" color={self.config.status_bar_text_color}"
+            if self.config.main.status_bar_style in ["text", "both"]:
+                status_bar_label += f" color={self.config.main.status_bar_text_color}"
         self.status = status_bar_label
 
         # Set status bar text and/or logo
@@ -665,7 +656,7 @@ class BitBar:
 
     def write_clipboard(self, text, skip_notification=False):
         clipboard.copy(text)
-        if self.config.clipboard_update_notifications and not skip_notification:
+        if self.config.main.clipboard_update_notifications and not skip_notification:
             self.display_notification("Clipboard updated")
 
     def copy_file_contents_to_clipboard(self, file_path, file_name=None):
@@ -748,9 +739,9 @@ class BitBar:
 
         :return:
         """
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         try:
-            _output = BitBar.pretty_print_sql(_input, **kwargs)
+            _output = self.pretty_print_sql(_input, **kwargs)
         except Exception as err:
             self.display_notification_error("Exception from sqlparse: {}".format(repr(err)))
         else:
@@ -773,7 +764,7 @@ class BitBar:
         self.logichub_pretty_print_sql(wrap_after=99999)
 
     def _split_tabs_to_columns(self, force_lower=False, sort=False, quote=False):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         if force_lower:
             _input = _input.lower()
         _columns = _input.split()
@@ -808,66 +799,66 @@ class BitBar:
         self._split_tabs_to_columns(quote=True, sort=True, force_lower=True)
 
     def logichub_sql_start_from_table_name(self):
-        _input = BitBar.read_clipboard()
-        self.write_clipboard(f'`SELECT * FROM {_input}`')
+        _input = self.read_clipboard()
+        self.write_clipboard(f'SELECT * FROM {_input}')
 
     def logichub_sql_start_without_table_name(self):
-        self.write_clipboard(f'`SELECT * FROM ')
+        self.write_clipboard(f'SELECT * FROM ')
 
     def logichub_sql_start_from_tabs(self):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         _columns = _input.split()
         _columns_formatted = ", ".join(_columns)
-        self.write_clipboard(f'`SELECT {_columns_formatted}\nFROM ')
+        self.write_clipboard(f'SELECT {_columns_formatted}\nFROM ')
 
     def logichub_sql_start_from_tabs_sorted(self):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         _columns = sorted(_input.split())
         _columns_formatted = ", ".join(_columns)
-        self.write_clipboard(f'`SELECT {_columns_formatted}\nFROM ')
+        self.write_clipboard(f'SELECT {_columns_formatted}\nFROM ')
 
     def logichub_sql_start_from_tabs_distinct(self):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         _columns = _input.split()
         _columns_formatted = ", ".join(_columns)
-        self.write_clipboard(f'`SELECT DISTINCT {_columns_formatted}\nFROM ')
+        self.write_clipboard(f'SELECT DISTINCT {_columns_formatted}\nFROM ')
 
     def logichub_tabs_to_columns_left_join(self):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         _columns = _input.split()
         self.write_clipboard("L.{}".format(", L.".join(_columns)))
 
     def logichub_tabs_to_columns_right_join(self):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         _columns = _input.split()
         self.write_clipboard("R.{}".format(", R.".join(_columns)))
 
     def logichub_sql_start_from_tabs_join_left(self):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         _columns = _input.split()
         _columns_formatted = "L.{}".format(", L.".join(_columns))
-        self.write_clipboard(f'`SELECT {_columns_formatted}\nFROM xxxx L\nLEFT JOIN xxxx R\nON L.xxxx = R.xxxx`')
+        self.write_clipboard(f'SELECT {_columns_formatted}\nFROM xxxx L\nLEFT JOIN xxxx R\nON L.xxxx = R.xxxx')
 
     def logichub_sql_start_from_tabs_join_right(self):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         _columns = _input.split()
         _columns_formatted = "R.{}".format(", R.".join(_columns))
-        self.write_clipboard(f'`SELECT {_columns_formatted}\nFROM xxxx L\nLEFT JOIN xxxx R\nON L.xxxx = R.xxxx`')
+        self.write_clipboard(f'SELECT {_columns_formatted}\nFROM xxxx L\nLEFT JOIN xxxx R\nON L.xxxx = R.xxxx')
 
     def logichub_operator_start_autoJoinTables(self):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         if ' ' in _input:
             self.display_notification_error("Invalid input; table name cannot contain spaces")
         self.write_clipboard(f'autoJoinTables([{_input}, xxxx])')
 
     def logichub_operator_start_jsonToColumns(self):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         if ' ' in _input:
             self.display_notification_error("Invalid input; table name cannot contain spaces")
         self.write_clipboard(f'jsonToColumns({_input}, "result")')
 
     def logichub_event_file_URL_from_file_name(self):
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         self.write_clipboard(f'file:///opt/docker/data/service/event_files/{_input}')
 
     def logichub_event_file_URL_static(self):
@@ -957,41 +948,6 @@ class BitBar:
 
         return input_value
 
-    # ToDo Old version: delete once I'm confident in the new version above.
-    # @staticmethod
-    # def _strip_json_for_spark(input_value, shorten_lists=False):
-    #     # Spark's "schema_of_json" defines the data type as null if a string is completely empty,
-    #     # so return "x" for strings so that there is always exactly 1 character in all strings
-    #     if input_value is None or isinstance(input_value, str):
-    #         # If nulls are present, or if it's already just a string, then return a single character string
-    #         return "x"
-    #     elif isinstance(input_value, list):
-    #         # First drop null values from the list
-    #         input_value = [x for x in input_value if x is not None]
-    #         if not input_value:
-    #             # If a list is empty, assume that it's a list of strings
-    #             return ["x"]
-    #         else:
-    #             # If a list has values...
-    #             if isinstance(input_value[0], dict) and not shorten_lists:
-    #                 # if the first value is a dict, and if shorten_lists is not enabled, process all entries
-    #                 # But ensure that all other entries are dicts too
-    #                 return [BitBar._strip_json_for_spark(value, shorten_lists=shorten_lists) for value in input_value if isinstance(value, dict)]
-    #             else:
-    #                 # If shorten_lists is enabled, just return a list of only the first value
-    #                 # Also, since Spark's complex data types assume that everything in an
-    #                 # array is the same data type, then just return the first value
-    #                 # if its data type is anything other than a dict
-    #                 return [BitBar._strip_json_for_spark(input_value[0], shorten_lists=shorten_lists)]
-    # 
-    #     elif isinstance(input_value, dict):
-    #         # Workaround: If a dict is empty, then schema_of_json will say it's a struct without keys (or just fail), so make it a string instead
-    #         if not input_value:
-    #             return "{}"
-    #         return {k: BitBar._strip_json_for_spark(v, shorten_lists=shorten_lists) for k, v in input_value.items()}
-    #     else:
-    #         return input_value
-
     def action_spark_from_json(self, recursive=True, block_invalid_keys=True):
         def check_for_invalid_characters(input_var):
             if not isinstance(input_var, (dict, list)):
@@ -1054,7 +1010,7 @@ class BitBar:
         json_str = self.read_clipboard().replace("'", "")
         # Convert json to dict or list
         json_loaded = self._json_notify_and_exit_when_invalid(manual_input=json_str)
-        json_updated = BitBar._strip_json_for_spark(json_loaded)
+        json_updated = self._strip_json_for_spark(json_loaded)
         if not recursive:
             json_updated = flatten(json_updated)
         if block_invalid_keys:
@@ -1086,7 +1042,7 @@ class BitBar:
         json_str = self.read_clipboard().replace("'", "")
         # Convert json to dict or list
         json_loaded = self._json_notify_and_exit_when_invalid(manual_input=json_str)
-        json_updated = BitBar._strip_json_for_spark(json_loaded)
+        json_updated = self._strip_json_for_spark(json_loaded)
         json_text = json.dumps(json_updated, ensure_ascii=False, separators=(', ', ': '))
         _output = f"SCHEMA_OF_JSON('{json_text}') AS json_test"
         self.write_clipboard(_output)
@@ -1129,7 +1085,7 @@ check_recent_user_activity
 
         :return:
         """
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         self.write_clipboard(f"""cp -p "{_input}" "{_input}.$(grep -Po '"image"[ \\t]*:[ \\t]*"\\K[^"]+' "{_input}" | sed -E 's/^.*://')-$(date +'%Y%m%d_%H%M%S')" """)
 
     def copy_descriptor_file_using_image_tag_then_edit_original(self):
@@ -1138,7 +1094,7 @@ check_recent_user_activity
 
         :return:
         """
-        _input = BitBar.read_clipboard()
+        _input = self.read_clipboard()
         self.write_clipboard(f"""cp -p "{_input}" "{_input}.$(grep -Po '"image"[ \\t]*:[ \\t]*"\\K[^"]+' "{_input}" | sed -E 's/^.*://')-$(date +'%Y%m%d_%H%M%S')"; vi "{_input}" """)
 
     def open_integration_container_by_product_name(self):
@@ -1170,29 +1126,28 @@ check_recent_user_activity
     def db_postgres_descriptors_and_docker_images(self):
         self.write_clipboard("""select id, modified, substring(descriptor from '"image" *: *"([^"]*?)') as docker_image from integration_descriptors order by id;""")
 
-    @staticmethod
-    def _build_query_instances_and_docker_images(extended=False, exclude=False):
+    def _build_query_instances_and_docker_images(self, extended=False, exclude=False):
         extended_fields = "" if not extended \
             else """integration_id, substring(cast(descriptor::json->'runtimeEnvironment'->'descriptor'->'image' as varchar) from ':([^:]+?)"$') as "Docker tag", """
         query_string = f"""select substring(cast(descriptor::json->'name' as varchar) from '"(.+)"') as "Integration Name", label, id, substring(cast(descriptor::json->'version' as varchar) from '"(.+)"') as "Integration Version", {extended_fields}substring(cast(descriptor::json->'runtimeEnvironment'->'descriptor'->'image' as varchar) from '"(.+)"') as "Full Docker Image" from integration_instances order by integration_id, label"""
 
         if exclude:
-            docker_image = BitBar.read_clipboard()
+            docker_image = self.read_clipboard()
             return f"""select * from ({query_string}) a where "Full Docker Image" not like '{docker_image}';"""
         else:
             return f"{query_string};"
 
     def db_postgres_instances_and_docker_images(self):
-        self.write_clipboard(BitBar._build_query_instances_and_docker_images(extended=False, exclude=False))
+        self.write_clipboard(self._build_query_instances_and_docker_images(extended=False, exclude=False))
 
     def db_postgres_instances_and_docker_images_extended(self):
-        self.write_clipboard(BitBar._build_query_instances_and_docker_images(extended=True, exclude=False))
+        self.write_clipboard(self._build_query_instances_and_docker_images(extended=True, exclude=False))
 
     def db_postgres_instances_and_docker_images_exclude_image(self):
-        self.write_clipboard(BitBar._build_query_instances_and_docker_images(extended=False, exclude=True))
+        self.write_clipboard(self._build_query_instances_and_docker_images(extended=False, exclude=True))
 
     def db_postgres_instances_and_docker_images_extended_exclude_image(self):
-        self.write_clipboard(BitBar._build_query_instances_and_docker_images(extended=True, exclude=True))
+        self.write_clipboard(self._build_query_instances_and_docker_images(extended=True, exclude=True))
 
     ############################################################################
     # LogicHub -> Integrations
@@ -1201,19 +1156,19 @@ check_recent_user_activity
         self.write_clipboard("/var/lib/docker/volumes/logichub_data/_data/shared/integrationsFiles/")
 
     def clipboard_integrationsFiles_path_logichub_host_from_file_name(self):
-        self.write_clipboard("/var/lib/docker/volumes/logichub_data/_data/shared/integrationsFiles/{}".format(BitBar.read_clipboard()))
+        self.write_clipboard("/var/lib/docker/volumes/logichub_data/_data/shared/integrationsFiles/{}".format(self.read_clipboard()))
 
     def clipboard_integrationsFiles_path_integration_containers(self):
         self.write_clipboard("/opt/files/shared/integrationsFiles/")
 
     def clipboard_integrationsFiles_path_integration_containers_from_file_name(self):
-        self.write_clipboard("/opt/files/shared/integrationsFiles/{}".format(BitBar.read_clipboard()))
+        self.write_clipboard("/opt/files/shared/integrationsFiles/{}".format(self.read_clipboard()))
 
     def clipboard_integrationsFiles_path_service_container(self):
         self.write_clipboard("/opt/docker/data/shared/integrationsFiles/")
 
     def clipboard_integrationsFiles_path_service_container_from_file_name(self):
-        self.write_clipboard("/opt/docker/data/shared/integrationsFiles/{}".format(BitBar.read_clipboard()))
+        self.write_clipboard("/opt/docker/data/shared/integrationsFiles/{}".format(self.read_clipboard()))
 
     ############################################################################
     # LogicHub -> LogicHub Upgrades
@@ -1278,13 +1233,13 @@ check_recent_user_activity
     ############################################################################
 
     def check_for_custom_networking_configs(self):
-        if self.config.BitBar_networking:
-            for _var in self.config.BitBar_networking.configs:
-                if isinstance(self.config.BitBar_networking.configs[_var], dict):
-                    if self.config.BitBar_networking.configs[_var].get("type") == "ssh":
-                        self.ssh_tunnel_configs.append((self.config.BitBar_networking.configs[_var].get("name", _var), f"ssh_tunnel_custom_{_var}"))
-                    elif self.config.BitBar_networking.configs[_var].get("type") == "redirect":
-                        self.port_redirect_configs.append((self.config.BitBar_networking.configs[_var].get("name"), f"port_redirect_custom_{_var}"))
+        if self.config.menu_networking:
+            for _var in self.config.menu_networking.configs:
+                if isinstance(self.config.menu_networking.configs[_var], dict):
+                    if self.config.menu_networking.configs[_var].get("type") == "ssh":
+                        self.ssh_tunnel_configs.append((self.config.menu_networking.configs[_var].get("name", _var), f"ssh_tunnel_custom_{_var}"))
+                    elif self.config.menu_networking.configs[_var].get("type") == "redirect":
+                        self.port_redirect_configs.append((self.config.menu_networking.configs[_var].get("name"), f"port_redirect_custom_{_var}"))
 
     ############################################################################
     # Networking -> Reset
@@ -1402,7 +1357,7 @@ check_recent_user_activity
 
         # """ Custom port redirection based on entries in logichub_tools.ini """
         config_name = re.sub('^port_redirect_custom_', '', sys.argv[1])
-        config_dict = self.config.BitBar_networking.configs.get(config_name)
+        config_dict = self.config.menu_networking.configs.get(config_name)
         if not config_dict:
             self.display_notification_error(f"Port redirect config [{config_name}] not found", print_stderr=True)
 
@@ -1524,9 +1479,9 @@ check_recent_user_activity
     def ssh_tunnel_custom(self):
         """ Custom SSH tunnel based on entries in logichub_tools.ini """
         config_name = re.sub('^ssh_tunnel_custom_', '', sys.argv[1])
-        if not self.config.BitBar_networking.configs.get(config_name):
+        if not self.config.menu_networking.configs.get(config_name):
             self.display_notification_error(f"SSH tunnel config [{config_name}] not found", print_stderr=True)
-        tunnel_config = self.config.BitBar_networking.configs[config_name]
+        tunnel_config = self.config.menu_networking.configs[config_name]
         self.do_execute_ssh_tunnel(tunnel_config)
 
     ############################################################################
@@ -1563,8 +1518,7 @@ check_recent_user_activity
 
         return run_fix(json_str)
 
-    @staticmethod
-    def _sort_dicts_and_lists(input_value):
+    def _sort_dicts_and_lists(self, input_value):
         """Sort dicts and lists recursively with a self-calling function"""
         _output = input_value
         # If the object is not a list or a dict, just return the value
@@ -1572,12 +1526,12 @@ check_recent_user_activity
             return _output
         if isinstance(_output, dict):
             # Crawl and sort dict values before sorting the dict itself
-            _output = {k: BitBar._sort_dicts_and_lists(v) for k, v in _output.items()}
+            _output = {k: self._sort_dicts_and_lists(v) for k, v in _output.items()}
             # Sort dict by keys
             _output = {k: _output[k] for k in sorted(_output.keys())}
         elif isinstance(_output, list):
             # Crawl and sort list values before sorting the list itself
-            _output = [BitBar._sort_dicts_and_lists(val) for val in _output]
+            _output = [self._sort_dicts_and_lists(val) for val in _output]
             try:
                 # Try to simply sort the list (will fail if entries are dicts or nested lists)
                 _output = sorted(_output)
@@ -1611,16 +1565,16 @@ check_recent_user_activity
 
         # If fix_output is enabled, crawl for dicts or lists stored as escaped strings
         if fix_output:
-            json_loaded = BitBar._fix_json(json_loaded)
+            json_loaded = self._fix_json(json_loaded)
 
         # If sort_output is enabled, sort recursively by keys and values
         if sort_output:
-            json_loaded = BitBar._sort_dicts_and_lists(json_loaded)
+            json_loaded = self._sort_dicts_and_lists(json_loaded)
 
         if format_auto:
             # If there are newlines in the clipboard, assume that it is formatted JSON
             # If no newlines, then return compact JSON
-            if '\n' in BitBar.read_clipboard():
+            if '\n' in self.read_clipboard():
                 format_output = True
                 compact_spacing = True
             else:
@@ -1646,19 +1600,19 @@ check_recent_user_activity
         if manual_input:
             _input = manual_input
         else:
-            _input = BitBar.read_clipboard()
+            _input = self.read_clipboard()
         try:
             json_dict = json.loads(_input, strict=False)
         except ValueError:
             json_dict = None
 
         if not json_dict or not isinstance(json_dict, (dict, list)):
-            self.display_notification_error(self.notification_json_invalid, self.title_json)
+            self.display_notification_error('Invalid JSON !!!!!!!!!!')
             sys.exit(1)
         else:
             return json_dict
 
-    # BitBar actions next
+    # Menu actions next
 
     def action_json_validate(self):
         json_loaded = self._json_notify_and_exit_when_invalid()
@@ -1714,7 +1668,7 @@ check_recent_user_activity
         :param override_clipboard:
         :return:
         """
-        _input = override_clipboard if override_clipboard else BitBar.read_clipboard()
+        _input = override_clipboard if override_clipboard else self.read_clipboard()
         url = url.replace(r'{}', _input)
         if open_url is True:
             subprocess.call(["open", url])
@@ -1722,10 +1676,9 @@ check_recent_user_activity
             self.write_clipboard(url)
 
     def add_default_jira_project_when_needed(self):
-        default_prefix = self.config.jira_default_prefix
-        jira_issue = BitBar.read_clipboard().upper()
+        jira_issue = self.read_clipboard().upper()
         if re.match(r"^\d+$", jira_issue):
-            jira_issue = f"{default_prefix}-{jira_issue}"
+            jira_issue = f"{self.config.main.jira_default_prefix}-{jira_issue}"
         return jira_issue
 
     def make_link_jira_and_open(self):
@@ -1893,27 +1846,28 @@ check_recent_user_activity
         """
         self.write_clipboard(self.read_clipboard(trim_input=False))
 
-    def execute(self, action):
+    def execute_bitbar(self, action):
         if not action:
             self.print_bitbar_menu_output()
+            return
+        if action not in self.action_list:
+            raise Exception("Not a valid action")
         else:
-            if action not in self.action_list:
-                raise Exception("Not a valid action")
-            else:
-                try:
-                    self.action_list[action].action()
-                except Exception as err:
-                    # self.fail_action_with_exception(traceback.format_exc())
-                    self.fail_action_with_exception(exception=err)
+            try:
+                self.action_list[action].action()
+            except Exception as err:
+                # self.fail_action_with_exception(traceback.format_exc())
+                self.fail_action_with_exception(exception=err)
 
 
 log = Log()
 
 
 def main():
+    config = Config()
     requested_action = None if len(sys.argv) == 1 else sys.argv[1]
-    bar = BitBar()
-    bar.execute(requested_action)
+    bar = Actions(config)
+    bar.execute_bitbar(requested_action)
 
 
 if __name__ == "__main__":
