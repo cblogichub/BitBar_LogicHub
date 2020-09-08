@@ -7,12 +7,15 @@
 
 process_input() {
     no_logs="false"
+    no_lh_backup="false"
     delete_dir="false"
     while true; do
         if [[ -z "$1" ]]; then
             break
         elif [[ "$1" == "--no-logs" ]]; then
             no_logs="true"
+        elif [[ "$1" == "--no-lh-backup" ]]; then
+            no_lh_backup="true"
         elif [[ "$1" == "--delete-dir" ]]; then
             delete_dir="true"
         else
@@ -112,7 +115,7 @@ run_backups() {
 
     print_color -h "Log Backup"
     if [[ "${no_logs}" == "true" ]]; then
-        print_color -gray "Skipping logs..."
+        print_color -gray "Skip requested..."
     else
         new_file_logs="${new_dir_full}_logs.tar.gz"
         print_color --nocolorbold "Backing up LogicHub logs (except thread dumps): ${new_file_logs}"
@@ -130,10 +133,14 @@ run_backups() {
     fi
 
     print_color -h "LogicHub Backup Script"
-    print_color --nocolorbold "Generating a backup..."
-    sudo /opt/logichub/scripts/backup.sh
-    new_backup="$(sudo ls -tr /opt/logichub/backups/|tail -n1)"
-    print_color --nocolorbold -n "\nNew backup: $(print_color "/opt/logichub/backups/${new_backup}")"
+    if [[ "${no_lh_backup}" == "true" ]]; then
+        print_color -gray "Skip requested..."
+    else
+        print_color --nocolorbold "Generating a backup..."
+        sudo /opt/logichub/scripts/backup.sh
+        new_backup="$(sudo ls -tr /opt/logichub/backups/|tail -n1)"
+        print_color --nocolorbold -n "\nNew backup: $(print_color "/opt/logichub/backups/${new_backup}")"
+    fi
 
     print_color -h "Service Container Backups"
 
@@ -227,7 +234,7 @@ run_backups() {
     print_color --nocolorbold "Tarring up all files: ${new_dir_full}.tar.gz"
     sudo tar czf "${new_dir_full}.tar.gz" "${new_dir}"
     sudo chown ${current_user}:${current_user} "${new_dir_full}.tar.gz"
-    print_color --nocolorbold "Final backup file: ${new_dir_full}.tar.gz"
+    print_color --nocolorbold "\nFinal backup file: ${new_dir_full}.tar.gz"
 
     if [[ "${delete_dir}" == "true" ]]; then
         print_color --nocolorbold "Deleting temp directory:"

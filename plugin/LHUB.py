@@ -430,7 +430,8 @@ class Actions:
 
         self.print_in_bitbar_menu("LogicHub Upgrades")
         self.make_action("Upgrade Prep: Visual inspection", self.logichub_upgrade_prep_verifications)
-        self.make_action("Upgrade Prep: Backups (run sudo -v as logichub/centos first!)", self.logichub_upgrade_prep_backups)
+        self.make_action("Upgrade Prep: Backups (run as logichub/centos!)", self.logichub_upgrade_prep_backups)
+        self.make_action("Upgrade Prep: Backups Lite (skip logs and LH backup script)", self.logichub_upgrade_prep_backups_lite, alternate=True)
 
         self.add_menu_divider_line(menu_depth=1)
 
@@ -1188,6 +1189,22 @@ check_recent_user_activity
         :return:
         """
         self.copy_file_contents_to_clipboard(self.config.dir_supporting_scripts, "upgrade_prep-backups.sh")
+
+    def logichub_upgrade_prep_backups_lite(self):
+        """
+        Upgrade Prep: Backups (lightweight version)
+
+        :return:
+        """
+        file_name = "upgrade_prep-backups.sh"
+        file_path = os.path.join(self.config.dir_supporting_scripts, file_name)
+        if not os.path.isfile(file_path):
+            self.display_notification_error("Invalid path to supporting script")
+        with open(file_path, "rU") as f:
+            output = f.read()
+
+        output = output.replace('run_backups "$@"', 'run_backups --no-logs --no-lh-backup')
+        self.write_clipboard(output)
 
     def logichub_upgrade_command_from_clipboard(self):
         """
