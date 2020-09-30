@@ -377,7 +377,6 @@ class Actions:
         self.make_action("Event File URL path (static)", self.logichub_event_file_URL_static, alternate=True)
 
         self.add_menu_divider_line(menu_depth=1)
-
         self.make_action("BETA: Spark Commands (from clipboard)", None, text_color="blue")
 
         # Full version of "from_json" action, which includes all nested dicts and lists
@@ -407,11 +406,21 @@ class Actions:
         self.make_action("psql", self.docker_psql)
 
         self.print_in_bitbar_menu("DB: Postgres")
+
+        self.make_action("Integrations", None, text_color="blue")
+
         self.make_action("List Descriptors w/ Docker Images", self.db_postgres_descriptors_and_docker_images)
+
         self.make_action("List Instances w/ Docker Images", self.db_postgres_instances_and_docker_images)
         self.make_action("List Instances w/ Docker Images (extended)", self.db_postgres_instances_and_docker_images_extended, alternate=True)
+
         self.make_action("List Instances w/ Docker Images, exclude image in clipboard", self.db_postgres_instances_and_docker_images_exclude_image)
         self.make_action("List Instances w/ Docker Images (extended), exclude image in clipboard", self.db_postgres_instances_and_docker_images_extended_exclude_image, alternate=True)
+
+        self.add_menu_divider_line(menu_depth=1)
+        self.make_action("Streams and Batches", None, text_color="blue")
+
+        self.make_action("List executing streams/batches", self.db_postgres_currently_running_streams)
 
         # ToDo Update the actions above to give each an alternate version which runs without having to go into psql first
 
@@ -455,6 +464,9 @@ class Actions:
 
         self.make_action("JSON Semi-Compact", self.action_json_semi_compact)
         self.make_action("JSON Semi-Compact (sorted)", self.action_json_semi_compact_sorted, alternate=True)
+
+        self.make_action("JSON Sort by Values", self.action_json_sort_by_values)
+        self.make_action("JSON Sort by Values (Reversed)", self.action_json_sort_by_values_reversed, alternate=True)
 
         self.add_menu_divider_line(menu_depth=1)
 
@@ -1150,6 +1162,12 @@ check_recent_user_activity
     def db_postgres_instances_and_docker_images_extended_exclude_image(self):
         self.write_clipboard(self._build_query_instances_and_docker_images(extended=True, exclude=True))
 
+    def db_postgres_currently_running_streams(self):
+        """ List executing streams/batches """
+        self.write_clipboard(
+            r"""select b.name as "Stream Name", a.id as "Batch ID", substring(a.stream_id from '"(.+)"') as "Stream ID", a.id as "Batch ID", b.flow as "Flow ID" from batches a left join streams b on substring(a.stream_id from '(\d+)') :: int = b.id where state = 'executing' order by "Stream ID", "Batch ID";"""
+        )
+
     ############################################################################
     # LogicHub -> Integrations
 
@@ -1565,7 +1583,7 @@ check_recent_user_activity
                 _output = [temp_map_input_as_strings[k] for k in sorted(temp_map_input_as_strings.keys())]
         return _output
 
-    def _process_json_clipboard(self, sort_output=False, format_output=False, fix_output=False, compact_spacing=False, format_auto=False):
+    def _process_json_clipboard(self, sort_output=None, format_output=False, fix_output=False, compact_spacing=False, format_auto=False):
         """
         One method to standardize reading JSON from the clipboard, processing as needed, and updating the clipboard
 
@@ -1586,7 +1604,12 @@ check_recent_user_activity
 
         # If sort_output is enabled, sort recursively by keys and values
         if sort_output:
-            json_loaded = self._sort_dicts_and_lists(json_loaded)
+            if sort_output == "values":
+                json_loaded = {k: v for k, v in sorted(json_loaded.items(), key=lambda item: item[1])}
+            elif sort_output == "values_reversed":
+                json_loaded = {k: v for k, v in sorted(json_loaded.items(), key=lambda item: item[1], reverse=True)}
+            else:
+                json_loaded = self._sort_dicts_and_lists(json_loaded)
 
         if format_auto:
             # If there are newlines in the clipboard, assume that it is formatted JSON
@@ -1657,6 +1680,13 @@ check_recent_user_activity
     def action_json_semi_compact(self):
         """ JSON Semi-Compact (compact but with spacing after colons and commas)"""
         self._process_json_clipboard(compact_spacing=True)
+
+    def action_json_sort_by_values(self, reverse=False):
+        sort_type= "values_reversed" if reverse else "values"
+        self._process_json_clipboard(sort_output=sort_type, format_output=True)
+
+    def action_json_sort_by_values_reversed(self):
+        self.action_json_sort_by_values(reverse=True)
 
     def action_json_semi_compact_sorted(self):
         """ JSON Semi-Compact (sorted) (compact but with spacing after colons and commas) """
