@@ -599,6 +599,7 @@ class Actions:
 
         if not chrome_driver_error:
             self.make_action("Generate screenshot", self.action_html_to_screenshot)
+            self.make_action("Generate screenshot (low res)", self.action_html_to_screenshot_low_res, alternate=True)
         else:
             self.make_action("Screenshot unavailable ({})".format(chrome_driver_error), None)
 
@@ -1867,6 +1868,10 @@ check_recent_user_activity
         target_path = chrome.generate_screenshot_file(url=html_file_url, save_path=output_path)
         chrome.driver.quit()
         _ = subprocess.run(["open", target_path], capture_output=True, universal_newlines=True)
+
+    def action_html_to_screenshot_low_res(self):
+        """ HTML in clipboard to screenshot (low res version) """
+        self.action_html_to_screenshot(window_size="800x600")
 
     ############################################################################
     # TECH -> Link Makers
