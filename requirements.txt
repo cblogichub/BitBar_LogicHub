@@ -4,3 +4,4 @@ sqlparse >= 0.3.0
 configobj >= 5.0.6
 dataclasses-json >= 0.5.1
 psutil >= 5.7.2
+selenium >= 3.141.0

@@ -25,6 +25,36 @@ from numbers import Number
 import clipboard
 import collections.abc
 import psutil
+import tempfile
+import distutils.spawn
+import shutil
+from pathlib import Path
+from datetime import datetime
+
+# ToDo Add a custom path param for ini file
+chrome_driver_default_paths = [
+    '/usr/bin/chromedriver',
+    '/usr/local/bin/chromedriver',
+]
+
+chromedriver = None
+chrome_driver_error = None
+
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+except:
+    chrome_driver_error = "selenium import failed"
+else:
+    chromedriver = distutils.spawn.find_executable("chromedriver")
+    if not chromedriver:
+        for _path in chrome_driver_default_paths:
+            if os.path.exists(_path):
+                chromedriver = _path
+                break
+
+if not chromedriver:
+    chrome_driver_error = "Chrome driver not found"
 
 
 # Global static variables
@@ -45,6 +75,69 @@ class Log:
     def debug(self, msg):
         if self.debug_enabled:
             print(f"[DEBUG] {msg}")
+
+
+class Browser:
+    driver = None
+    window_size = "1920,1080"
+    download_dir = None
+
+    def __init__(self, window_size=None, download_dir=None):
+        if window_size:
+            self.window_size = window_size.strip().replace(" ", "")
+        if download_dir:
+            assert os.path.exists(download_dir)
+        self.download_dir = os.path.abspath(download_dir) if download_dir else tempfile.gettempdir()
+
+        if not self.driver:
+            self.driver = self.make_driver()
+            # Disabled for troubleshooting but found it still works. Maybe just needed when capturing actual URLs?
+            # self.enable_download_in_headless_chrome()
+
+    def make_driver(self):
+        chromedriver = distutils.spawn.find_executable("chromedriver")
+        if not chromedriver:
+            for _path in chrome_driver_default_paths:
+                if os.path.exists(_path):
+                    chromedriver = _path
+                    break
+
+        if not chromedriver:
+            # Try Python 3 style, then fall back onto Python2 compatible
+            try:
+                raise FileNotFoundError("Chrome driver not found")
+            except:
+                raise IOError("Chrome driver not found")
+
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--window-size={}".format(self.window_size))
+        return webdriver.Chrome(executable_path=chromedriver, options=chrome_options)
+
+    def enable_download_in_headless_chrome(self):
+        # add missing support for chrome "send_command"  to selenium webdriver
+        self.driver.command_executor._commands["send_command"] = ("POST", '/session/$sessionId/chromium/send_command')
+        params = {'cmd': 'Page.setDownloadBehavior', 'params': {'behavior': 'allow', 'downloadPath': self.download_dir}}
+        self.driver.execute("send_command", params)
+
+    def generate_screenshot_file(self, url, save_path=None):
+        temp_target = Reusable.generate_temp_file_path("png", prefix="screenshot_")
+
+        self.driver.get(url)
+        _ = self.driver.save_screenshot(temp_target)
+        # Try moving the file to the requested path. If it fails, simply print that the target failed, so the file can instead be found at the temp file path.
+        if not save_path:
+            save_path = self.download_dir if self.download_dir else temp_target
+
+        if save_path != temp_target:
+            try:
+                shutil.move(temp_target, save_path)
+            except Exception as e:
+                print("Failed to move file to requested location: {}\n\nException:\n{}\n\n".format(save_path, str(e)))
+                save_path = temp_target
+
+        return save_path
 
 
 class Reusable:
@@ -168,6 +261,23 @@ class Reusable:
                 else:
                     rtn_dct[k] = v
         return rtn_dct
+
+    @staticmethod
+    def generate_temp_file_path(ext, prefix=None, name_only=False):
+        assert ext
+        _temp_file_name = "{}{}".format(prefix or "", datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3])
+        if ext:
+            _temp_file_name += "." + ext
+        if name_only:
+            return _temp_file_name
+        return os.path.join(tempfile.gettempdir(), _temp_file_name)
+
+    @staticmethod
+    def write_text_to_temp_file(text_str, file_ext, file_name_prefix=None):
+        _temp_file = Reusable.generate_temp_file_path(file_ext, prefix=file_name_prefix)
+        with open(_temp_file, 'w') as _f:
+            _f.write(text_str)
+        return os.path.abspath(_temp_file)
 
 
 @dataclass_json
@@ -422,6 +532,17 @@ class Actions:
 
         self.make_action("List executing streams/batches", self.db_postgres_currently_running_streams)
 
+        self.add_menu_divider_line(menu_depth=1)
+        self.make_action("Flows", None, text_color="blue")
+
+        self.make_action("Summarize Flows (latest versions)", self.db_postgres_summarize_latest_flows)
+        self.make_action("Summarize Flows (Lite)", self.db_postgres_summarize_latest_flows_lite, alternate=True)
+
+        self.add_menu_divider_line(menu_depth=1)
+        self.make_action("Users", None, text_color="blue")
+
+        self.make_action("List users with pending password reset", self.db_postgres_users_pending_password_reset)
+
         # ToDo Update the actions above to give each an alternate version which runs without having to go into psql first
 
         self.print_in_bitbar_menu("Integrations")
@@ -472,6 +593,14 @@ class Actions:
 
         self.make_action("Fix JSON (escaped strings to dicts/lists)", self.action_json_fix)
         self.make_action("Sort by keys and values (recursive)", self.action_json_sort)
+
+        self.print_in_bitbar_menu("HTML")
+        self.make_action("Open as a file", self.action_html_to_temp_file)
+
+        if not chrome_driver_error:
+            self.make_action("Generate screenshot", self.action_html_to_screenshot)
+        else:
+            self.make_action("Screenshot unavailable ({})".format(chrome_driver_error), None)
 
         self.print_in_bitbar_menu("Link Makers")
 
@@ -1168,6 +1297,24 @@ check_recent_user_activity
             r"""select b.name as "Stream Name", a.id as "Batch ID", substring(a.stream_id from '"(.+)"') as "Stream ID", a.id as "Batch ID", b.flow as "Flow ID" from batches a left join streams b on substring(a.stream_id from '(\d+)') :: int = b.id where state = 'executing' order by "Stream ID", "Batch ID";"""
         )
 
+    def db_postgres_summarize_latest_flows(self):
+        """ Summarize Flows (latest versions) """
+        self.write_clipboard(
+            """select b.name as "Current Name", a.id as "Flow ID", b.version as "Current Version", b.created_at as "Last Modified", c.created_at as "Original Create Date" from (select id, min(version) as min_version, max(version) as max_version from versioned_flows group by id) a left join versioned_flows b on a.id = b.id and a.max_version = b.version left join versioned_flows c on a.id = c.id and a.min_version = c.version order by "Current Name";"""
+        )
+
+    def db_postgres_summarize_latest_flows_lite(self):
+        """ Summarize Flows (Lite) """
+        self.write_clipboard(
+            """select b.name, a.id, a.max_version from (select id, min(version) as min_version, max(version) as max_version from versioned_flows group by id) a left join versioned_flows b on a.id = b.id and a.max_version = b.version;"""
+        )
+
+    def db_postgres_users_pending_password_reset(self):
+        """ List users with pending password reset """
+        self.write_clipboard(
+            r"""select username, failed_attempts, ROUND(EXTRACT(epoch FROM current_date - password_modified_at)/3600/24) as days_pending from users where password_needs_reset = true;"""
+        )
+
     ############################################################################
     # LogicHub -> Integrations
 
@@ -1699,6 +1846,27 @@ check_recent_user_activity
     def action_json_sort(self):
         """ JSON Sort """
         self._process_json_clipboard(sort_output=True, compact_spacing=True, format_auto=True)
+
+    ############################################################################
+    # TECH -> HTML
+
+    def _clipboard_html_to_temp_file(self):
+        _input = self.read_clipboard()
+        return Reusable.write_text_to_temp_file(_input, "html", "html_text_")
+
+    def action_html_to_temp_file(self):
+        """ HTML in clipboard to file """
+        html_file = self._clipboard_html_to_temp_file()
+        _ = subprocess.run(["open", html_file])
+
+    def action_html_to_screenshot(self, output_path=None, window_size=None):
+        """ HTML in clipboard to screenshot """
+        html_file = self._clipboard_html_to_temp_file()
+        chrome = Browser(download_dir=output_path, window_size=window_size)
+        html_file_url = Path(html_file).as_uri()
+        target_path = chrome.generate_screenshot_file(url=html_file_url, save_path=output_path)
+        chrome.driver.quit()
+        _ = subprocess.run(["open", target_path], capture_output=True, universal_newlines=True)
 
     ############################################################################
     # TECH -> Link Makers
