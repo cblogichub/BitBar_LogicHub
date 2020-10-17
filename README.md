@@ -39,4 +39,5 @@ this:
    1. Option 2: copy the plugin file: `cp <path>/BitBar_LogicHub/plugin/LHUB.py LHUB.1h.py`
    1. Option 3 (NOT recommended): Go into BitBar preferences and point directly to the plugin directory within the BitBar_LogicHub repo
 1. If the plugin does not show up in your status bar right away, go into BitBar preferences, choose "Change Plugin Folder" (even if you plan to keep the same directory), navigate to your plugin folder, and click the "Use as Plugins Directory" button
-1. For URL and HTML screenshot actions, you must install the Chrome driver and keep it in sync with the version of Chrome installed in MacOS.
+1. For URL and HTML screenshot actions, you must install the Chrome driver and keep it in sync with the version of Chrome installed in MacOS. 
+You will also have to run it once manually so that MacOS prompts you to allow it to run or it will be blocked when called by BitBar.
