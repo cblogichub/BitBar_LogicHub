@@ -30,6 +30,7 @@ import distutils.spawn
 import shutil
 from pathlib import Path
 from datetime import datetime
+import csv
 
 # ToDo Add a custom path param for ini file
 chrome_driver_default_paths = [
@@ -122,7 +123,7 @@ class Browser:
         self.driver.execute("send_command", params)
 
     def generate_screenshot_file(self, url, save_path=None):
-        temp_target = Reusable.generate_temp_file_path("png", prefix="screenshot_")
+        temp_target = Reusable.generate_temp_file_path("png", prefix="screenshot")
 
         self.driver.get(url)
         _ = self.driver.save_screenshot(temp_target)
@@ -263,21 +264,28 @@ class Reusable:
         return rtn_dct
 
     @staticmethod
-    def generate_temp_file_path(ext, prefix=None, name_only=False):
-        assert ext
+    def generate_temp_file_path(file_ext, prefix=None, name_only=False):
+        assert file_ext
+        if prefix and not prefix.endswith("_"):
+            prefix = prefix + "_"
         _temp_file_name = "{}{}".format(prefix or "", datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3])
-        if ext:
-            _temp_file_name += "." + ext
+        if file_ext:
+            _temp_file_name += "." + file_ext
         if name_only:
             return _temp_file_name
         return os.path.join(tempfile.gettempdir(), _temp_file_name)
 
     @staticmethod
     def write_text_to_temp_file(text_str, file_ext, file_name_prefix=None):
-        _temp_file = Reusable.generate_temp_file_path(file_ext, prefix=file_name_prefix)
+        _temp_file = Reusable.generate_temp_file_path(file_ext=file_ext, prefix=file_name_prefix)
         with open(_temp_file, 'w') as _f:
             _f.write(text_str)
         return os.path.abspath(_temp_file)
+
+    @staticmethod
+    def sort_dict_by_values(_input, reverse=False):
+        # return sorted(_input.items(), key=lambda x: x[1], reverse=reverse)
+        return {k: v for k, v in sorted(_input.items(), key=lambda x: x[1], reverse=reverse)}
 
 
 @dataclass_json
@@ -500,6 +508,12 @@ class Actions:
         self.make_action("from_json: no recursion, allow invalid keys", self.action_spark_from_json_non_recursive_allow_invalid, alternate=True)
 
         self.make_action("schema_of_json: Create column from JSON clipboard", self.action_json_to_schema_of_json)
+
+        self.add_menu_divider_line(menu_depth=1)
+        self.make_action("runtimeStats (from batch stats json in clipboard)", None, text_color="blue")
+
+        self.make_action("Runtime Stats to JSON", self.logichub_runtime_stats_to_json)
+        self.make_action("Runtime Stats to CSV", self.logichub_runtime_stats_to_csv)
 
         self.print_in_bitbar_menu("Shell: Host")
         self.make_action("Add myself to docker group", self.shell_lh_host_fix_add_self_to_docker_group)
@@ -822,6 +836,10 @@ class Actions:
         with open(file_path, "rU") as f:
             output = f.read()
         self.write_clipboard(output)
+
+    def _clipboard_to_temp_file(self, file_ext):
+        _input = self.read_clipboard()
+        return Reusable.write_text_to_temp_file(_input, file_ext, file_ext + "_text")
 
     def make_upgrade_command(self, version: str = None):
         if not version:
@@ -1189,6 +1207,53 @@ class Actions:
         json_text = json.dumps(json_updated, ensure_ascii=False, separators=(', ', ': '))
         _output = f"SCHEMA_OF_JSON('{json_text}') AS json_test"
         self.write_clipboard(_output)
+
+    def _logichub_runtime_stats_sort_by_longest(self):
+        _input = self._json_notify_and_exit_when_invalid()
+        if not _input:
+            return
+        _stats = _input.get("runtimeStats")
+        if "runtimeStats" not in _input.keys():
+            self.display_notification_error("runtimeStats key not found")
+            return
+        elif not _input.get("runtimeStats"):
+            self.display_notification_error("runtimeStats key not found")
+            return
+        _stats = dict(Reusable.sort_dict_by_values(_stats, reverse=True))
+        _input["runtimeStats"] = _stats
+        return _input
+
+    def logichub_runtime_stats_to_json(self):
+        _stats = self._logichub_runtime_stats_sort_by_longest()
+        if not _stats:
+            return
+        _stats_only = _stats.get("runtimeStats")
+        self.write_clipboard(json.dumps(_stats, indent=2))
+        self.display_notification(f"Total processing time: {sum(_stats_only.values())}")
+
+    def logichub_runtime_stats_to_csv(self):
+        _stats = self._logichub_runtime_stats_sort_by_longest()
+        if not _stats:
+            return
+
+        _stats_only = _stats.get("runtimeStats")
+        total_time = sum(_stats_only.values())
+        csv_file = Reusable.generate_temp_file_path("csv", prefix="runtime_stats_")
+        _stats_for_csv = {
+            "executionTimeMs": _stats.get("executionTimeMs"),
+            "VIRTUAL TOTAL": total_time,
+        }
+        _stats_for_csv.update(_stats_only)
+        dict_data =[{"node_name": x, "time": y} for x, y in _stats_for_csv.items()]
+
+        with open(csv_file, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=['node_name', 'time'])
+            writer.writeheader()
+            for data in dict_data:
+                writer.writerow(data)
+
+        _ = subprocess.run(["open", csv_file], capture_output=True, universal_newlines=True)
+        self.display_notification(f"Total processing time: {total_time}")
 
     ############################################################################
     # LogicHub -> Shell: Host
@@ -1740,7 +1805,7 @@ check_recent_user_activity
         :param fix_output: Fix values where dicts or lists are stored as escaped strings
         :param compact_spacing: When converting JSON to a compact string, make it semi-compact (i.e. still include spaces after colons and commas)
         :param format_auto: If set to True, override "format_output" and check whether there are line breaks in the clipboard input and set format_output automatically
-        :return: 
+        :return:
         """
 
         # Read clipboard, convert from JSON
@@ -1753,9 +1818,9 @@ check_recent_user_activity
         # If sort_output is enabled, sort recursively by keys and values
         if sort_output:
             if sort_output == "values":
-                json_loaded = {k: v for k, v in sorted(json_loaded.items(), key=lambda item: item[1])}
+                json_loaded = Reusable.sort_dict_by_values(json_loaded)
             elif sort_output == "values_reversed":
-                json_loaded = {k: v for k, v in sorted(json_loaded.items(), key=lambda item: item[1], reverse=True)}
+                json_loaded = Reusable.sort_dict_by_values(json_loaded, reverse=True)
             else:
                 json_loaded = self._sort_dicts_and_lists(json_loaded)
 
@@ -1851,18 +1916,14 @@ check_recent_user_activity
     ############################################################################
     # TECH -> HTML
 
-    def _clipboard_html_to_temp_file(self):
-        _input = self.read_clipboard()
-        return Reusable.write_text_to_temp_file(_input, "html", "html_text_")
-
     def action_html_to_temp_file(self):
         """ HTML in clipboard to file """
-        html_file = self._clipboard_html_to_temp_file()
+        html_file = self._clipboard_to_temp_file(file_ext="html")
         _ = subprocess.run(["open", html_file])
 
     def action_html_to_screenshot(self, output_path=None, window_size=None):
         """ HTML in clipboard to screenshot """
-        html_file = self._clipboard_html_to_temp_file()
+        html_file = self._clipboard_to_temp_file(file_ext="html")
         chrome = Browser(download_dir=output_path, window_size=window_size)
         html_file_url = Path(html_file).as_uri()
         target_path = chrome.generate_screenshot_file(url=html_file_url, save_path=output_path)
