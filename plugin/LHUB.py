@@ -487,7 +487,7 @@ class Actions:
         self.make_action("Event File URL path (static)", self.logichub_event_file_URL_static, alternate=True)
 
         self.add_menu_divider_line(menu_depth=1)
-        self.make_action("BETA: Spark Commands (from clipboard)", None, text_color="blue")
+        self.make_action("Spark Commands (from clipboard)", None, text_color="blue")
 
         # Full version of "from_json" action, which includes all nested dicts and lists
         self.make_action("from_json: full", self.action_spark_from_json)
