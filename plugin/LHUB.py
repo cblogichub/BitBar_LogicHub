@@ -482,6 +482,8 @@ class Actions:
 
         self.make_action("SQL New (from table name)", self.logichub_sql_start_from_table_name)
         self.make_action("SQL New (without table name)", self.logichub_sql_start_without_table_name, alternate=True)
+        self.make_action("SQL New with Integration Error Check (from table name)", self.logichub_sql_start_with_integ_error_check)
+        self.make_action("SQL New with Integration Error Check (without table name)", self.logichub_sql_start_with_integ_error_check_without_table_name, alternate=True)
         self.make_action("SQL Start from spaced strings", self.logichub_sql_start_from_tabs)
         self.make_action("SQL Start from spaced strings (sorted)", self.logichub_sql_start_from_tabs_sorted)
         self.make_action("SQL Start from spaced strings (distinct)", self.logichub_sql_start_from_tabs_distinct)
@@ -490,6 +492,7 @@ class Actions:
         self.make_action("SQL Start from spaced strings (join with right columns)", self.logichub_sql_start_from_tabs_join_right)
         self.make_action("SQL Start from spaced strings (join, right columns only)", self.logichub_tabs_to_columns_right_join, alternate=True)
         self.make_action("Operator Start: autoJoinTables", self.logichub_operator_start_autoJoinTables)
+        self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail)
         self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns)
         self.make_action("Event File URL from File Name", self.logichub_event_file_URL_from_file_name)
         self.make_action("Event File URL path (static)", self.logichub_event_file_URL_static, alternate=True)
@@ -512,7 +515,7 @@ class Actions:
         self.add_menu_divider_line(menu_depth=1)
         self.make_action("runtimeStats (from batch stats json in clipboard)", None, text_color="blue")
 
-        self.make_action("Runtime Stats to JSON", self.logichub_runtime_stats_to_json)
+        self.make_action("Runtime Stats Sort JSON", self.logichub_runtime_stats_to_json)
         self.make_action("Runtime Stats to CSV", self.logichub_runtime_stats_to_csv)
 
         self.print_in_bitbar_menu("Shell: Host")
@@ -966,6 +969,22 @@ class Actions:
     def logichub_sql_start_without_table_name(self):
         self.write_clipboard(f'SELECT * FROM ')
 
+    @staticmethod
+    def _logichub_integ_error_sql(table_name=None):
+        sql_string = """SELECT *,\nCASE\n  WHEN COALESCEEMPTY(GET_JSON_OBJECT(result, "$.error"), stderr) != '' THEN PRINTF('Integration failed: %s', COALESCEEMPTY(GET_JSON_OBJECT(result, "$.error"), stderr))\n  WHEN exit_code = 0 AND GET_JSON_OBJECT(result, "$.has_error") = false THEN ''\n  ELSE 'Integration appears to have failed: no error provided, but unexpected result'\nEND AS integ_error\n\nFROM """
+        if table_name:
+            sql_string += table_name
+        return sql_string
+
+    def logichub_sql_start_with_integ_error_check(self):
+        _input = self.read_clipboard()
+        if ' ' in _input:
+            self.display_notification_error("Invalid input; table name cannot contain spaces")
+        self.write_clipboard(self._logichub_integ_error_sql(_input))
+
+    def logichub_sql_start_with_integ_error_check_without_table_name(self):
+        self.write_clipboard(self._logichub_integ_error_sql())
+
     def logichub_sql_start_from_tabs(self):
         _input = self.read_clipboard()
         _columns = _input.split()
@@ -1011,6 +1030,12 @@ class Actions:
         if ' ' in _input:
             self.display_notification_error("Invalid input; table name cannot contain spaces")
         self.write_clipboard(f'autoJoinTables([{_input}, xxxx])')
+
+    def logichub_operator_start_forceFail(self):
+        _input = self.read_clipboard()
+        if ' ' in _input:
+            self.display_notification_error("Invalid input; table name cannot contain spaces")
+        self.write_clipboard(f'forceFail({_input}, "integ_error")')
 
     def logichub_operator_start_jsonToColumns(self):
         _input = self.read_clipboard()
