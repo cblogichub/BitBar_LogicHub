@@ -512,6 +512,9 @@ class Actions:
 
         self.make_action("schema_of_json: Create column from JSON clipboard", self.action_json_to_schema_of_json)
 
+        self.print_in_bitbar_menu("LogicHub Troubleshooting")
+        self.make_action("Sanitize JSON for comparison (from clipboard)", self.sanitize_logichub_json)
+
         self.add_menu_divider_line(menu_depth=1)
         self.make_action("runtimeStats (from batch stats json in clipboard)", None, text_color="blue")
 
@@ -1233,6 +1236,55 @@ class Actions:
         _output = f"SCHEMA_OF_JSON('{json_text}') AS json_test"
         self.write_clipboard(_output)
 
+    def sanitize_logichub_json(self):
+        def crawl(data):
+            if isinstance(data, dict):
+                # number_fields_to_sanitize = ["x", "y"]
+                fields_to_delete = ["x", "y"]
+                string_fields_to_sanitize = ["id", "nodeId", "flowId", "oldId"]
+                for k in list(data.keys()):
+                    if k in fields_to_delete:
+                        del data[k]
+                    # if k in number_fields_to_sanitize:
+                    #     data[k] = 0
+                    elif k in string_fields_to_sanitize:
+                        data[k] = "..."
+                    elif k == "executionDependsOn" and isinstance(data[k], list):
+                        data[k] = ["" for v in data[k]]
+                    elif k == "warnings":
+                        data[k] = []
+                # crawl through values of every k in the dict
+                data = {k: crawl(v) for k, v in data.items()}
+
+            elif isinstance(data, list):
+                data = [crawl(d) for d in data]
+
+                # for lists of dicts, if there is a name field, sort by the name
+                if data and isinstance(data[0], dict):
+                    has_name = True
+                    for node in data:
+                        if not isinstance(node, dict):
+                            has_name = False
+                            break
+                        if not node.get("name"):
+                            has_name = False
+                            break
+                        if node.get("name") == "Output" and node.get("kind") == "output" and node.get("nodes"):
+                            node["nodes"] = ["" for v in node["nodes"]]
+
+                    if has_name:
+                        data = sorted(data, key=lambda i: i['name'])
+
+            return data
+
+        _input = self._json_notify_and_exit_when_invalid()
+        if not _input:
+            return
+        _input = self._process_json_clipboard(sort_output=True, format_output=True, return_obj=True)
+        _input = crawl(_input)
+
+        self.write_clipboard(json.dumps(_input, indent=2))
+
     def _logichub_runtime_stats_sort_by_longest(self):
         _input = self._json_notify_and_exit_when_invalid()
         if not _input:
@@ -1821,7 +1873,7 @@ check_recent_user_activity
                 _output = [temp_map_input_as_strings[k] for k in sorted(temp_map_input_as_strings.keys())]
         return _output
 
-    def _process_json_clipboard(self, sort_output=None, format_output=False, fix_output=False, compact_spacing=False, format_auto=False):
+    def _process_json_clipboard(self, sort_output=None, format_output=False, fix_output=False, compact_spacing=False, format_auto=False, return_obj=False):
         """
         One method to standardize reading JSON from the clipboard, processing as needed, and updating the clipboard
 
@@ -1857,6 +1909,9 @@ check_recent_user_activity
                 compact_spacing = True
             else:
                 format_output = False
+
+        if return_obj:
+            return json_loaded
 
         if format_output is True:
             # Format output with line breaks and indentation
