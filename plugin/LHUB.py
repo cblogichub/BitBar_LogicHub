@@ -513,7 +513,7 @@ class Actions:
         self.make_action("schema_of_json: Create column from JSON clipboard", self.action_json_to_schema_of_json)
 
         self.print_in_bitbar_menu("LogicHub Troubleshooting")
-        self.make_action("Sanitize JSON for comparison (from clipboard)", self.sanitize_logichub_json)
+        self.make_action("Sanitize playbook JSON for comparison (from clipboard)", self.sanitize_logichub_json)
 
         self.add_menu_divider_line(menu_depth=1)
         self.make_action("runtimeStats (from batch stats json in clipboard)", None, text_color="blue")
@@ -811,10 +811,12 @@ class Actions:
         return _var
 
     @staticmethod
-    def read_clipboard(trim_input=True):
+    def read_clipboard(trim_input=True, lower=False):
         clip = clipboard.paste()
         if trim_input:
             clip = clip.strip()
+        if lower is True:
+            clip = clip.lower()
         return clip
 
     def write_clipboard(self, text, skip_notification=False):
@@ -854,7 +856,7 @@ class Actions:
             # To make sure this works whether or not the leading 'm' is provided, strip out any 'm'
             version = version.replace('m', '').strip()
             if not version.strip() or not re.match(r'^\d{2,}\.\d+$', version):
-                self.display_notification_error("Invalid LogicHub version")
+                self.display_notification_error("Invalid LogicHub version ({})".format(version))
         return f"bash <(curl https://s3-us-west-1.amazonaws.com/lhub-installer/installer-m{version}.sh)"
 
     @staticmethod
@@ -1520,7 +1522,7 @@ check_recent_user_activity
 
         :return:
         """
-        version = self.read_clipboard()
+        version = self.read_clipboard(trim_input=True, lower=True)
         cmd = self.make_upgrade_command(version)
         self.write_clipboard(cmd)
 
@@ -1539,7 +1541,7 @@ check_recent_user_activity
 
         :return:
         """
-        version = self.read_clipboard()
+        version = self.read_clipboard(trim_input=True, lower=True)
         cmd = "{}; {}".format(self.make_backup_command(), self.make_upgrade_command(version))
         self.write_clipboard(cmd)
 
