@@ -934,6 +934,10 @@ class Actions:
 
     def _split_tabs_to_columns(self, force_lower=False, sort=False, quote=False):
         _input = self.read_clipboard()
+
+        # Strip out commas and quotes in case the user clicked the wrong one and wants to go right back to processing it
+        _input = re.sub('[,"]', '', _input)
+
         if force_lower:
             _input = _input.lower()
         _columns = _input.split()
