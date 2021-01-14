@@ -288,6 +288,38 @@ class Reusable:
         return {k: v for k, v in sorted(_input.items(), key=lambda x: x[1], reverse=reverse)}
 
 
+# ToDo Finish building the Icons class and switch everything over to using it
+# ToDo Finish putting lh_batch_success.png to use for the "runtimeStats" section
+
+class Icons:
+    # Class for centralizing all logos used by the plugin
+
+    file_menu_logichub = "bitbar_menu_logichub.ico"
+    file_menu_ssh = "bitbar_menu_ssh.png"
+
+    file_status_small = "bitbar_status_small.png"
+    file_status_large = "bitbar_status_large.png"
+    file_status_large_dark = "bitbar_status_large_dark.png"
+    file_status_xlarge = "bitbar_status_xlarge.png"
+    file_status_xlarge_dark = "bitbar_status_xlarge_dark.png"
+
+    file_lh_batch_success = "lh_batch_success.png"
+
+    def __init__(self, repo_path):
+        self.image_path = os.path.join(repo_path, "supporting_files/originals")
+
+    def __image_to_base64_string(self, file_name):
+        file_path = os.path.join(self.config.image_file_path, file_name)
+        with open(file_path, "rb") as image_file:
+            image_bytes = image_file.read()
+            image_b64 = base64.b64encode(image_bytes)
+        return image_b64.decode("unicode_escape")
+
+    @property
+    def lh_batch_status(self):
+        return
+
+
 @dataclass_json
 @dataclass
 class ConfigMain:
