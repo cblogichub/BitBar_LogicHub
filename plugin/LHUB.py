@@ -968,7 +968,8 @@ class Actions:
         _input = self.read_clipboard()
 
         # Strip out commas and quotes in case the user clicked the wrong one and wants to go right back to processing it
-        _input = re.sub('[,"]', '', _input)
+        # Strip out pipes too so this can be used on postgresql headers as well
+        _input = re.sub('[,"|]', '', _input)
 
         if force_lower:
             _input = _input.lower()
