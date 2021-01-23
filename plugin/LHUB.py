@@ -1013,7 +1013,7 @@ class Actions:
 
     @staticmethod
     def _logichub_integ_error_sql(table_name=None):
-        sql_string = """SELECT *,\nCASE\n  WHEN COALESCEEMPTY(GET_JSON_OBJECT(result, "$.error"), stderr) != '' THEN PRINTF('Integration failed: %s', COALESCEEMPTY(GET_JSON_OBJECT(result, "$.error"), stderr))\n  WHEN exit_code = 0 AND GET_JSON_OBJECT(result, "$.has_error") = false THEN ''\n  ELSE 'Integration appears to have failed: no error provided, but unexpected result'\nEND AS integ_error\n\nFROM """
+        sql_string = """SELECT CASE\n  WHEN exit_code = 0 AND GET_JSON_OBJECT(result, "$.has_error") = false THEN ''\n  WHEN COALESCEEMPTY(GET_JSON_OBJECT(result, "$.error"), stderr) != '' THEN PRINTF('Integration failed: %s', COALESCEEMPTY(GET_JSON_OBJECT(result, "$.error"), stderr))\n  ELSE 'Integration appears to have failed: no error provided, but unexpected result'\nEND AS integ_error,\n*\nFROM """
         if table_name:
             sql_string += table_name
         return sql_string
@@ -1388,9 +1388,8 @@ class Actions:
     printf "    %s\n" "${users_all[@]}" | sort -u | grep -P ".*"
 
     printf "\n\nLatest activity:\n\n"
-    echo "$(for i in ${users_all[@]}; do printf "    $(zgrep -ih "user: ${i}" "${previous_service_log}" /var/log/logichub/service/service.log | grep -P "^\d{4}-" | tail -n1 | grep "${i}")\n"; done)" | sort -u | grep -P "User: \K[^\s\(]+"
+    echo "$(for i in "${users_all[@]}"; do printf "    $(zgrep -ih "user: ${i}" "${previous_service_log}" /var/log/logichub/service/service.log | grep -P "^\d{4}-" | tail -n1 | grep "${i}")\n"; done)" | sort -u | grep -P "^ *20\d{2}-\d{2}-\d{2} [\d:.]+ [+\d]+|(?<=User: )[^\s\(]+"
     printf "\n\nCurrent date:\n\n"
-    printf "    $(TZ=America/Los_Angeles date +"%Y-%m-%d %H:%M:%S (%Z)")\n"
     printf "    $(TZ=UTC date +"%Y-%m-%d %H:%M:%S (%Z)")\n"
     printf "\n"
 }
