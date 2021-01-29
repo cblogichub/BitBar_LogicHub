@@ -1032,15 +1032,11 @@ class Actions:
         self.write_clipboard(self._logichub_integ_error_sql())
 
     def logichub_sql_start_from_tabs(self):
-        _input = self.read_clipboard()
-        _columns = _input.split()
-        _columns_formatted = ", ".join(_columns)
+        _columns_formatted = self._split_tabs_to_columns(update_clipboard=False)
         self.write_clipboard(f'SELECT {_columns_formatted}\nFROM ')
 
     def logichub_sql_start_from_tabs_sorted(self):
-        _input = self.read_clipboard()
-        _columns = sorted(_input.split())
-        _columns_formatted = ", ".join(_columns)
+        _columns_formatted = self._split_tabs_to_columns(update_clipboard=False, sort=True)
         self.write_clipboard(f'SELECT {_columns_formatted}\nFROM ')
 
     def logichub_sql_start_from_tabs_distinct(self):
