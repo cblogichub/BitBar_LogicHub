@@ -964,7 +964,7 @@ class Actions:
         """
         self.logichub_pretty_print_sql(wrap_after=99999)
 
-    def _split_tabs_to_columns(self, force_lower=False, sort=False, quote=False):
+    def _split_tabs_to_columns(self, force_lower=False, sort=False, quote=False, update_clipboard=True):
         _input = self.read_clipboard()
 
         # Strip out commas and quotes in case the user clicked the wrong one and wants to go right back to processing it
@@ -978,7 +978,11 @@ class Actions:
             _columns = sorted(_columns)
         output_pattern = '"{}"' if quote else "{}"
         join_pattern = '", "' if quote else ", "
-        self.write_clipboard(output_pattern.format(join_pattern.join(_columns)))
+        final_output = output_pattern.format(join_pattern.join(_columns))
+        if update_clipboard:
+            self.write_clipboard(final_output)
+        else:
+            return final_output
 
     def logichub_tabs_to_columns(self):
         self._split_tabs_to_columns()
