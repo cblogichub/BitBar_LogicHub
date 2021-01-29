@@ -252,7 +252,7 @@ class Reusable:
                 elif v is None:
                     pass
                 elif k in rtn_dct and type(v) != type(rtn_dct[k]):
-                    raise TypeError(f"Overlapping keys exist with different types: original is {type(rtn_dct[k])}, new value is {type(v)}")
+                    raise TypeError(f"Overlapping keys exist with different types: original is {type(rtn_dct[k]).__name__}, new value is {type(v).__name__}")
                 elif isinstance(rtn_dct[k], dict) and isinstance(merge_dct[k], collections.abc.Mapping):
                     rtn_dct[k] = Reusable.dict_merge(rtn_dct[k], merge_dct[k], add_keys=add_keys)
                 elif isinstance(v, list):
