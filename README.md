@@ -14,6 +14,7 @@ The following Python packages are required. (See requirements.txt for exact vers
 * sqlparse
 * configobj
 * dataclasses-json
+* psutil
 * selenium (only required if you want URL & HTML screenshot actions to work)
 
 Note: since these packages must be installed for whatever installation of 
