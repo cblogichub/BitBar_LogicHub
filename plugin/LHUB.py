@@ -1504,7 +1504,7 @@ check_recent_user_activity
     def db_postgres_users_pending_password_reset(self):
         """ List users with pending password reset """
         self.write_clipboard(
-            r"""select username, failed_attempts, ROUND(EXTRACT(epoch FROM current_date - password_modified_at)/3600/24) as days_pending from users where password_needs_reset = true;"""
+            r"""select username, failed_attempts, ROUND(EXTRACT(epoch FROM current_date - password_modified_at)/3600/24) as days_pending from users where password_needs_reset = true and is_enabled = true and is_deleted = false;"""
         )
 
     ############################################################################
