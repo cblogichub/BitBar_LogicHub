@@ -2005,7 +2005,12 @@ check_recent_user_activity
         else:
             _input = self.read_clipboard()
         try:
-            json_dict = json.loads(_input, strict=False)
+            new = json.loads(_input, strict=False)
+            for _try in range(5):
+                if isinstance(new, (dict, list)):
+                    break
+                new = json.loads(new, strict=False)
+            json_dict = new
         except ValueError:
             json_dict = None
 
