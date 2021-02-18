@@ -568,6 +568,12 @@ class Actions:
         self.make_action("service bash", self.action_docker_service_bash)
         self.make_action("psql shell", self.action_docker_psql_shell)
 
+        self.make_action("psql query without shell", self.action_docker_psql_without_shell)
+        self.make_action("psql query without shell (query from clipboard)", self.action_docker_psql_without_shell_from_clipboard, alternate=True)
+
+        self.make_action("psql query without shell, json output", self.action_docker_psql_without_shell_json)
+        self.make_action("psql query without shell, json output (query from clipboard)", self.action_docker_psql_without_shell_json_from_clipboard, alternate=True)
+
         self.print_in_bitbar_menu("DB: Postgres")
 
         self.make_action("Integrations", None, text_color="blue")
@@ -1454,6 +1460,20 @@ check_recent_user_activity
 
     def action_docker_psql_shell(self):
         self.write_clipboard('docker exec -it postgres psql --u daemon lh\n\\pset pager off\n')
+
+    def action_docker_psql_without_shell(self, text=None):
+        text = (text if text else "...").replace('"', r'\"')
+        self.write_clipboard(f'docker exec -it postgres psql -P pager --u daemon lh -c "{text}"')
+
+    def action_docker_psql_without_shell_from_clipboard(self):
+        self.action_docker_psql_without_shell(text=self.read_clipboard())
+
+    def action_docker_psql_without_shell_json(self, text=None):
+        text = (text if text else "...").replace('"', r'\"')
+        self.write_clipboard(f'docker exec -it postgres psql -P format=unaligned --u daemon lh -t -c "select json_agg(a) as results from ({text}) a"')
+
+    def action_docker_psql_without_shell_json_from_clipboard(self):
+        self.action_docker_psql_without_shell_json(text=self.read_clipboard())
 
     ############################################################################
     # LogicHub -> DB: Postgres
