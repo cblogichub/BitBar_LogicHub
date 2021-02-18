@@ -1,7 +1,7 @@
 #!/usr/bin/env PYTHONIOENCODING=UTF-8 /usr/local/bin/python3
 
 # <bitbar.title>LogicHub Utils: Stuff Chad Wanted (because OCD sucks)</bitbar.title>
-# <bitbar.version>v2.0 beta</bitbar.version>
+# <bitbar.version>v2.1</bitbar.version>
 # <bitbar.author>Chad Roberts</bitbar.author>
 # <bitbar.author.github>deathbywedgie</bitbar.author.github>
 # <bitbar.desc>Various helpful actions for LogicHub engineers</bitbar.desc>
@@ -564,8 +564,9 @@ class Actions:
         self.make_action("List Edited Descriptors", self.lh_service_shell_list_edited_descriptors)
 
         self.print_in_bitbar_menu("Docker")
-        self.make_action("service bash", self.docker_service_bash)
-        self.make_action("psql", self.docker_psql)
+
+        self.make_action("service bash", self.action_docker_service_bash)
+        self.make_action("psql shell", self.action_docker_psql_shell)
 
         self.print_in_bitbar_menu("DB: Postgres")
 
@@ -1448,10 +1449,10 @@ check_recent_user_activity
     ############################################################################
     # LogicHub -> Docker
 
-    def docker_service_bash(self):
+    def action_docker_service_bash(self):
         self.write_clipboard('docker exec -it service /bin/bash\n')
 
-    def docker_psql(self):
+    def action_docker_psql_shell(self):
         self.write_clipboard('docker exec -it postgres psql --u daemon lh\n\\pset pager off\n')
 
     ############################################################################
