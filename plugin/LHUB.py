@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 import traceback
 from numbers import Number
+import urllib.parse
 
 import clipboard
 import collections.abc
@@ -697,6 +698,7 @@ class Actions:
         self.make_action("Text to Lowercase", self.text_make_lowercase)
         self.make_action("Trim Text in Clipboard", self.text_trim_string)
         self.make_action("Remove Text Formatting", self.text_remove_formatting)
+        self.make_action("Decode URL Encoding (from clipboard)", self.decode_url_encoding)
 
         # ------------ Menu Section: Networking ------------ #
 
@@ -2281,6 +2283,14 @@ check_recent_user_activity
         :return:
         """
         self.write_clipboard(self.read_clipboard(trim_input=False))
+
+    def decode_url_encoding(self):
+        """ Decode URL Encoding (from clipboard) """
+        _input = self.read_clipboard()
+        try:
+            self.write_clipboard(urllib.parse.unquote(_input))
+        except:
+            self.display_notification_error("Failed to decode URL string")
 
     def execute_bitbar(self, action):
         if not action:
