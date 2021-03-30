@@ -473,7 +473,7 @@ class Actions:
         me = psutil.Process()
         parent = psutil.Process(me.ppid())
         self.parent = parent.name()
-        self.menu_type = 'BitBar' if self.parent == 'BitBar' else 'pystray'
+        self.menu_type = self.parent if self.parent in ('BitBar', 'xbar') else 'pystray'
 
         self.title_default = "LogicHub Helpers"
         self.script_name = sys.argv[0]
@@ -724,14 +724,15 @@ class Actions:
 
         self.print_in_bitbar_menu(f"---")
         self.print_in_bitbar_menu(f"Parent: {self.parent}")
-        if self.menu_type == 'BitBar':
+        if self.menu_type in ('BitBar', 'xbar'):
             # Lastly, attempt to get the BitBar version and print it as an FYI
             try:
                 with open("/Applications/BitBar.app/Contents/Info.plist", "r") as app_file:
                     _app_info = app_file.read()
-                    bitbar_version = re.findall('<key>CFBundleVersion<.*\s+<string>(.*?)</string>', _app_info)[0]
-                    if bitbar_version:
-                        self.print_in_bitbar_menu(f"BitBar version: {bitbar_version}")
+                    version_info = re.findall('<key>CFBundleVersion<.*\s+<string>(.*?)</string>', _app_info)
+                    app_version = version_info[0] if version_info else '-'
+                    if app_version:
+                        self.print_in_bitbar_menu(f"{self.menu_type} version: {app_version}")
             except:
                 pass
 
