@@ -734,7 +734,7 @@ class Actions:
             try:
                 with open(f"/Applications/{self.menu_type}.app/Contents/Info.plist", "r") as app_file:
                     _app_info = app_file.read()
-                    version_info = re.findall('<key>CFBundleVersion<.*\s+<string>(.*?)</string>', _app_info)
+                    version_info = re.findall('<key>CFBundleVersion<[\s\S]*?<string>(.*?)</string>', _app_info)
                     app_version = version_info[0] if version_info else '-'
                     if app_version:
                         self.print_in_menu(f"{self.menu_type} version: {app_version}")
