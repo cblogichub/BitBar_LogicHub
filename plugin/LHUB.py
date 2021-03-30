@@ -1,11 +1,13 @@
 #!/usr/bin/env PYTHONIOENCODING=UTF-8 /usr/local/bin/python3
 
-# <bitbar.title>LogicHub Utils: Stuff Chad Wanted (because OCD sucks)</bitbar.title>
-# <bitbar.version>v2.1</bitbar.version>
-# <bitbar.author>Chad Roberts</bitbar.author>
-# <bitbar.author.github>deathbywedgie</bitbar.author.github>
-# <bitbar.desc>Various helpful actions for LogicHub engineers</bitbar.desc>
-# <bitbar.dependencies>See readme.md</bitbar.dependencies>
+# <xbar.title>LogicHub Utils: Stuff Chad Wanted (because OCD sucks)</xbar.title>
+# <xbar.version>v2.2</xbar.version>
+# <xbar.author>Chad Roberts</xbar.author>
+# <xbar.author.github>deathbywedgie</xbar.author.github>
+# <xbar.desc>Various helpful actions for LogicHub engineers</xbar.desc>
+# <xbar.image></xbar.image>
+# <xbar.dependencies>See readme.md</xbar.dependencies>
+# <xbar.abouturl>https://github.com/deathbywedgie/BitBar_LogicHub</xbar.abouturl>
 
 import base64
 import configobj
@@ -41,6 +43,7 @@ chrome_driver_default_paths = [
 
 chromedriver = None
 chrome_driver_error = None
+
 
 try:
     from selenium import webdriver
@@ -289,28 +292,30 @@ class Reusable:
         return {k: v for k, v in sorted(_input.items(), key=lambda x: x[1], reverse=reverse)}
 
 
+# ToDo REVISIT
+
 # ToDo Finish building the Icons class and switch everything over to using it
 # ToDo Finish putting lh_batch_success.png to use for the "runtimeStats" section
 
 class Icons:
     # Class for centralizing all logos used by the plugin
 
-    file_menu_logichub = "bitbar_menu_logichub.ico"
-    file_menu_ssh = "bitbar_menu_ssh.png"
+    file_menu_logichub = "LH_menu_logichub.ico"
+    file_menu_ssh = "LH_menu_ssh.png"
 
-    file_status_small = "bitbar_status_small.png"
-    file_status_large = "bitbar_status_large.png"
-    file_status_large_dark = "bitbar_status_large_dark.png"
-    file_status_xlarge = "bitbar_status_xlarge.png"
-    file_status_xlarge_dark = "bitbar_status_xlarge_dark.png"
+    file_status_small = "LH_menu_status_small.png"
+    file_status_large = "LH_menu_status_large.png"
+    file_status_large_dark = "LH_menu_status_large_dark.png"
+    file_status_xlarge = "LH_menu_status_xlarge.png"
+    file_status_xlarge_dark = "LH_menu_status_xlarge_dark.png"
 
     file_lh_batch_success = "lh_batch_success.png"
 
     def __init__(self, repo_path):
-        self.image_path = os.path.join(repo_path, "supporting_files/originals")
+        self.image_path = os.path.join(repo_path, "supporting_files/images")
 
     def __image_to_base64_string(self, file_name):
-        file_path = os.path.join(self.config.image_file_path, file_name)
+        file_path = os.path.join(self.image_path, file_name)
         with open(file_path, "rb") as image_file:
             image_bytes = image_file.read()
             image_b64 = base64.b64encode(image_bytes)
@@ -348,7 +353,7 @@ class ConfigMain:
 
     # Text for the notification label (not used if status_bar_style is set to logo)
     # Default is "LHUB"
-    # If status_bar_style is set to "custom", you can specify additional formatting criteria according to BitBar's plugin API
+    # If status_bar_style is set to "custom", you can specify additional formatting criteria according to xbar's plugin API
     status_bar_label: str
 
     # Choose the logo: small, large, xl
@@ -428,14 +433,14 @@ class Config:
 
         logos_by_os_theme = {
             "Dark": {
-                "small": "bitbar_status_small.png",
-                "large": "bitbar_status_large_dark.png",
-                "xl": "bitbar_status_xlarge_dark.png",
+                "small": "LH_menu_status_small.png",
+                "large": "LH_menu_status_large_dark.png",
+                "xl": "LH_menu_status_xlarge_dark.png",
             },
             "Light": {
-                "small": "bitbar_status_small.png",
-                "large": "bitbar_status_large.png",
-                "xl": "bitbar_status_xlarge.png",
+                "small": "LH_menu_status_small.png",
+                "large": "LH_menu_status_large.png",
+                "xl": "LH_menu_status_xlarge.png",
             }
         }
         self.status_bar_logo = logos_by_os_theme[self.main.os_theme][self.main.status_bar_icon_size]
@@ -478,7 +483,7 @@ class Actions:
         self.title_default = "LogicHub Helpers"
         self.script_name = sys.argv[0]
         self.status = ""
-        self.bitbar_menu_output = ""
+        self.menu_output = ""
 
         self.url_jira = r"https://logichub.atlassian.net/browse/{}"
         self.url_uws = r"https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID={}"
@@ -494,8 +499,8 @@ class Actions:
 
         # ------------ Menu Section: LogicHub ------------ #
 
-        self.add_menu_section("LogicHub | image={} size=20 color=blue".format(self.image_to_base64_string("bitbar_menu_logichub.ico")))
-        self.print_in_bitbar_menu("LQL & Web UI")
+        self.add_menu_section("LogicHub | image={} size=20 color=blue".format(self.image_to_base64_string("LH_menu_logichub.ico")))
+        self.print_in_menu("LQL & Web UI")
         self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql)
         self.make_action("(Beta) Pretty Print SQL options", action=None, alternate=True)
         self.make_action("Wrapped at 80 characters", self.logichub_pretty_print_sql_wrapped, menu_depth=2)
@@ -545,7 +550,7 @@ class Actions:
 
         self.make_action("schema_of_json: Create column from JSON clipboard", self.action_json_to_schema_of_json)
 
-        self.print_in_bitbar_menu("LogicHub Troubleshooting")
+        self.print_in_menu("LogicHub Troubleshooting")
         self.make_action("Sanitize playbook JSON for comparison (from clipboard)", self.sanitize_logichub_json)
 
         self.add_menu_divider_line(menu_depth=1)
@@ -554,17 +559,17 @@ class Actions:
         self.make_action("Runtime Stats Sort JSON", self.logichub_runtime_stats_to_json)
         self.make_action("Runtime Stats to CSV", self.logichub_runtime_stats_to_csv)
 
-        self.print_in_bitbar_menu("Shell: Host")
+        self.print_in_menu("Shell: Host")
         self.make_action("Add myself to docker group", self.shell_lh_host_fix_add_self_to_docker_group)
         self.make_action("Own Instance Version", self.logichub_shell_own_instance_version)
         self.make_action("Path to service container data", self.shell_lh_host_path_to_service_container_volume)
         self.make_action("Recent UI user activity", self.logichub_check_recent_user_activity)
         self.make_action("Stop and Start All Services", self.logichub_stop_and_start_services_in_one_line)
 
-        self.print_in_bitbar_menu("Shell: Service Container")
+        self.print_in_menu("Shell: Service Container")
         self.make_action("List Edited Descriptors", self.lh_service_shell_list_edited_descriptors)
 
-        self.print_in_bitbar_menu("Docker")
+        self.print_in_menu("Docker")
 
         self.make_action("service bash", self.action_docker_service_bash)
         self.make_action("psql shell", self.action_docker_psql_shell)
@@ -575,7 +580,7 @@ class Actions:
         self.make_action("psql query without shell, json output", self.action_docker_psql_without_shell_json)
         self.make_action("psql query without shell, json output (query from clipboard)", self.action_docker_psql_without_shell_json_from_clipboard, alternate=True)
 
-        self.print_in_bitbar_menu("DB: Postgres")
+        self.print_in_menu("DB: Postgres")
 
         self.make_action("Integrations", None, text_color="blue")
 
@@ -605,7 +610,7 @@ class Actions:
 
         # ToDo Update the actions above to give each an alternate version which runs without having to go into psql first
 
-        self.print_in_bitbar_menu("Integrations")
+        self.print_in_menu("Integrations")
         self.make_action("integrationsFiles path: LogicHub host", self.clipboard_integrationsFiles_path_logichub_host)
         self.make_action("integrationsFiles path: LogicHub host (from file name)", self.clipboard_integrationsFiles_path_logichub_host_from_file_name, alternate=True)
         self.make_action("integrationsFiles path: integration containers", self.clipboard_integrationsFiles_path_integration_containers)
@@ -618,7 +623,7 @@ class Actions:
 
         self.make_action("Open bash in docker container by product name", self.open_integration_container_by_product_name)
 
-        self.print_in_bitbar_menu("LogicHub Upgrades")
+        self.print_in_menu("LogicHub Upgrades")
         self.make_action("Upgrade Prep: Visual inspection", self.logichub_upgrade_prep_verifications)
         self.make_action("Upgrade Prep: Backups (run as logichub/centos!)", self.logichub_upgrade_prep_backups)
         self.make_action("Upgrade Prep: Backups Lite (skip logs and LH backup script)", self.logichub_upgrade_prep_backups_lite, alternate=True)
@@ -634,7 +639,7 @@ class Actions:
 
         self.add_menu_section(":wrench: TECH | size=20 color=blue")
 
-        self.print_in_bitbar_menu("JSON")
+        self.print_in_menu("JSON")
         self.make_action("JSON Validate", self.action_json_validate)
 
         self.make_action("JSON Format", self.action_json_format)
@@ -654,7 +659,7 @@ class Actions:
         self.make_action("Fix JSON (escaped strings to dicts/lists)", self.action_json_fix)
         self.make_action("Sort by keys and values (recursive)", self.action_json_sort)
 
-        self.print_in_bitbar_menu("HTML")
+        self.print_in_menu("HTML")
         self.make_action("Open as a file", self.action_html_to_temp_file)
 
         if not chrome_driver_error:
@@ -663,7 +668,7 @@ class Actions:
         else:
             self.make_action("Screenshot unavailable ({})".format(chrome_driver_error), None)
 
-        self.print_in_bitbar_menu("Link Makers")
+        self.print_in_menu("Link Makers")
 
         self.make_action("Jira: Open Link from ID", self.make_link_jira_and_open)
         self.make_action("Jira: Make Link from ID", self.make_link_jira, alternate=True)
@@ -672,7 +677,7 @@ class Actions:
         self.make_action("Nmap: Open link to script documentation", self.make_link_nmap_script_and_open)
         self.make_action("Nmap: Make link to script documentation", self.make_link_nmap_script, alternate=True)
 
-        self.print_in_bitbar_menu("Shell Commands (general)")
+        self.print_in_menu("Shell Commands (general)")
 
         # Visual Mode, Permanent
         self.make_action("vim: visual mode - disable permanently", self.shell_vim_visual_mode_disable_permanently)
@@ -693,7 +698,7 @@ class Actions:
         # Disable visual mode AND enable line numbers all at once
         self.make_action("vim: Set both permanently", self.shell_vim_set_both_permanently)
 
-        self.print_in_bitbar_menu("Text Editing")
+        self.print_in_menu("Text Editing")
         self.make_action("Text to Uppercase", self.text_make_uppercase)
         self.make_action("Text to Lowercase", self.text_make_lowercase)
         self.make_action("Trim Text in Clipboard", self.text_trim_string)
@@ -705,60 +710,60 @@ class Actions:
         # First check whether there are any custom networking configs (i.e. ssh tunnels or port redirects)
         self.check_for_custom_networking_configs()
 
-        self.add_menu_section("Networking | image={} size=20 color=blue".format(self.image_to_base64_string("bitbar_menu_ssh.png")))
+        self.add_menu_section("Networking | image={} size=20 color=blue".format(self.image_to_base64_string("LH_menu_ssh.png")))
 
-        self.print_in_bitbar_menu("Reset")
+        self.print_in_menu("Reset")
         self.make_action("Terminate SSH tunnels", self.action_terminate_tunnels, terminal=True)
         self.make_action("Terminate Local Port Redirection", self.action_terminate_port_redirection, terminal=True)
         self.make_action("Terminate All", self.action_terminate_all, terminal=True)
 
-        self.print_in_bitbar_menu("Port Redirection")
+        self.print_in_menu("Port Redirection")
         # If custom redirect configs are defined in logichub_tools.ini, then add actions for each
         for _config in self.port_redirect_configs:
             self.make_action(_config[0], self.port_redirect_custom, terminal=True, action_id=_config[1])
 
-        self.print_in_bitbar_menu("SSH Tunnels (custom)")
+        self.print_in_menu("SSH Tunnels (custom)")
         # If custom ssh configs are defined in logichub_tools.ini, then add actions for each
         for _config in self.ssh_tunnel_configs:
             self.make_action(_config[0], self.ssh_tunnel_custom, terminal=True, action_id=_config[1])
 
-        self.print_in_bitbar_menu(f"---")
-        self.print_in_bitbar_menu(f"Parent: {self.parent}")
+        self.print_in_menu(f"---")
+        self.print_in_menu(f"Parent: {self.parent}")
         if self.menu_type in ('BitBar', 'xbar'):
-            # Lastly, attempt to get the BitBar version and print it as an FYI
+            # Lastly, attempt to get the BitBar/xbar version and print it as an FYI
             try:
-                with open("/Applications/BitBar.app/Contents/Info.plist", "r") as app_file:
+                with open(f"/Applications/{self.menu_type}.app/Contents/Info.plist", "r") as app_file:
                     _app_info = app_file.read()
                     version_info = re.findall('<key>CFBundleVersion<.*\s+<string>(.*?)</string>', _app_info)
                     app_version = version_info[0] if version_info else '-'
                     if app_version:
-                        self.print_in_bitbar_menu(f"{self.menu_type} version: {app_version}")
+                        self.print_in_menu(f"{self.menu_type} version: {app_version}")
             except:
                 pass
 
     def add_menu_section(self, label, menu_depth=0):
         """
-        Print a divider line as needed by BitBar, then print a label for the new section
+        Print a divider line as needed by the plugin menu, then print a label for the new section
         :param label:
         :param menu_depth: 0 for top level, 1 for submenu, 2 for first nested submenu, etc.
         :return:
         """
-        assert label, "New BitBar section requested without providing a label"
+        assert label, "New menu section requested without providing a label"
         self.add_menu_divider_line(menu_depth=menu_depth)
-        self.print_in_bitbar_menu("--" * menu_depth + label)
+        self.print_in_menu("--" * menu_depth + label)
 
     def add_menu_divider_line(self, menu_depth=0):
         """
-        Print a divider line in the BitBar Menu
+        Print a divider line in the plugin menu
         Menu depth of 0 for top level menu, 1 for first level submenu, 2 for a nested submenu, etc.
         :param menu_depth:
         :return:
         """
         _divider_line = "---" + "--" * menu_depth
-        self.print_in_bitbar_menu(_divider_line)
+        self.print_in_menu(_divider_line)
 
-    def print_bitbar_menu_output(self):
-        print(self.bitbar_menu_output.strip())
+    def print_menu_output(self):
+        print(self.menu_output.strip())
 
     ############################################################################
     # Reusable functions
@@ -779,8 +784,8 @@ class Actions:
         self.display_notification(_error, title)
         sys.exit(1)
 
-    def print_in_bitbar_menu(self, msg):
-        self.bitbar_menu_output += f"{msg}\n"
+    def print_in_menu(self, msg):
+        self.menu_output += f"{msg}\n"
 
     def fail_action_with_exception(self, trace: traceback.format_exc = None, exception: BaseException = None, print_stderr=False):
         if not trace:
@@ -796,8 +801,8 @@ class Actions:
 
     # ToDo Finish: catch exceptions when printing the menu and gracefully handle the exception/traceback
     def fail_with_exception_old(self, msg):
-        self.print_in_bitbar_menu('LHUB_FAIL| color=red\n---')
-        self.print_in_bitbar_menu(f'FAILED: {msg}| color=red')
+        self.print_in_menu('LHUB_FAIL| color=red\n---')
+        self.print_in_menu(f'FAILED: {msg}| color=red')
         try:
             raise type(msg)(msg)
         except TypeError as e:
@@ -826,7 +831,7 @@ class Actions:
         self.status = status_bar_label
 
         # Set status bar text and/or logo
-        self.print_in_bitbar_menu(self.status)
+        self.print_in_menu(self.status)
 
     def make_action(self, name, action, action_id=None, menu_depth=1, alternate=False, terminal=False, text_color=None):
         menu_name = name
@@ -837,9 +842,9 @@ class Actions:
             action_string = action_string + ' alternate=true'
         if not action:
             if text_color:
-                self.print_in_bitbar_menu(f'{menu_name} | {action_string} color={text_color}')
+                self.print_in_menu(f'{menu_name} | {action_string} color={text_color}')
             else:
-                self.print_in_bitbar_menu(f'{menu_name} | {action_string}')
+                self.print_in_menu(f'{menu_name} | {action_string}')
             return
 
         if not action_id:
@@ -849,7 +854,7 @@ class Actions:
         _var = action_tuple(action_id, name, action)
         self.action_list[action_id] = _var
         terminal = str(terminal).lower()
-        self.print_in_bitbar_menu(f'{menu_name} | {action_string} bash="{self.script_name}" param1="{action_id}" terminal={terminal}')
+        self.print_in_menu(f'{menu_name} | {action_string} bash="{self.script_name}" param1="{action_id}" terminal={terminal}')
         return _var
 
     @staticmethod
@@ -2293,9 +2298,9 @@ check_recent_user_activity
         except:
             self.display_notification_error("Failed to decode URL string")
 
-    def execute_bitbar(self, action):
+    def execute_plugin(self, action):
         if not action:
-            self.print_bitbar_menu_output()
+            self.print_menu_output()
             return
         if action not in self.action_list:
             raise Exception("Not a valid action")
@@ -2314,7 +2319,7 @@ def main():
     config = Config()
     requested_action = None if len(sys.argv) == 1 else sys.argv[1]
     bar = Actions(config)
-    bar.execute_bitbar(requested_action)
+    bar.execute_plugin(requested_action)
 
 
 if __name__ == "__main__":
