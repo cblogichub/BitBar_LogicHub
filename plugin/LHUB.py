@@ -578,7 +578,11 @@ class Actions:
         self.make_action("Add myself to docker group", self.shell_lh_host_fix_add_self_to_docker_group)
         self.make_action("Own Instance Version", self.logichub_shell_own_instance_version)
         self.make_action("Path to service container data", self.shell_lh_host_path_to_service_container_volume)
-        self.make_action("Recent UI user activity", self.logichub_check_recent_user_activity)
+        self.make_action("Recent UI user activity", self.logichub_check_recent_user_activity_v2)
+
+        # ToDo Delete this and its method once confirmed it's no longer needed.
+        self.make_action("Recent UI user activity (old version)", self.logichub_check_recent_user_activity, alternate=True)
+
         self.make_action("Stop and Start All Services", self.logichub_stop_and_start_services_in_one_line)
 
         self.print_in_menu("Shell: Service Container")
