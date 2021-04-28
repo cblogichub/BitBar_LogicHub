@@ -1299,16 +1299,16 @@ class Actions:
 
         def format_for_spark(_input):
             types = {
-                str: "string",
-                bool: "boolean",
-                float: "double",
-                int: "bigint",
+                str: "STRING",
+                bool: "BOOLEAN",
+                float: "DOUBLE",
+                int: "BIGINT",
             }
             if type(_input) in types.keys():
                 return types[type(_input)]
 
             if isinstance(_input, dict):
-                format_str = "struct<"
+                format_str = "STRUCT<"
                 for k, v in _input.items():
                     format_str += f"{k}: {format_for_spark(v)}, "
 
@@ -1317,7 +1317,7 @@ class Actions:
                 format_str += '>'
                 return format_str
             elif isinstance(_input, list):
-                format_str = f"array<{format_for_spark(_input[0])}>"
+                format_str = f"ARRAY<{format_for_spark(_input[0])}>"
             else:
                 raise TypeError(f"Unmapped data type: {type(_input)}")
             return format_str
