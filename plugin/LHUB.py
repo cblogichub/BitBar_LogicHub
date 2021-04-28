@@ -979,11 +979,6 @@ class Actions:
         """
         # Replace line breaks with spaces, then trim leading and trailing whitespace
         _output = re.sub(r'[\n\r]+', ' ', input_str).strip()
-        # tick_wrapper = False
-        # In case copied straight from LogicHub, strip out wrapping ticks, but remember...
-        # if re.match(r'^`(.*)`$', _output):
-        #     tick_wrapper = True
-        #     _output = re.sub(r'^(`+)([\s\S]+)\1$', r'\2', _output)
 
         # If wrapped in ticks, strip those off. We no longer require them in LogicHub.
         _output = re.sub(r'^`|(?<!\\)`$', '', _output)
@@ -996,17 +991,6 @@ class Actions:
         if re.match(r"^SELECT \*\nFROM ", _output):
             _output = re.sub(r"^SELECT \*\n", "SELECT * ", _output)
 
-        # if tick_wrapper:
-        #     _output = rf"`{_output}`"
-        #     # Realign the "select" section, because alignment is broken when a tick is added to wrap the query
-        #     output_lines = _output.split('\n')
-        #     for line_num in range(len(output_lines)):
-        #         # Only add spaces to the "select" portion
-        #         if output_lines[line_num].upper().startswith("FROM"):
-        #             break
-        #         elif line_num > 0:
-        #             output_lines[line_num] = " " + output_lines[line_num]
-        #     _output = '\n'.join(output_lines)
         return _output
 
     ############################################################################
