@@ -991,6 +991,18 @@ class Actions:
         if re.match(r"^SELECT \*\nFROM ", _output):
             _output = re.sub(r"^SELECT \*\n", "SELECT * ", _output)
 
+        # specific keyword replacements for forcing uppercase
+        specific_functions_to_uppercase = [
+            "get_json_object", "from_unixtime", r"min(", r"max(", r"sum("
+        ]
+        for f in specific_functions_to_uppercase:
+            if f in _output:
+                _output = _output.replace(f, f.upper())
+
+        # Workaround for "result" always getting turned into uppercase by sqlparse
+        if re.findall(r"\bRESULT\b", _output) and not re.findall(r"\bRESULT\b", input_str):
+            _output = re.sub(r"\bRESULT\b", "result", _output)
+
         return _output
 
     ############################################################################
