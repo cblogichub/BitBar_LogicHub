@@ -505,12 +505,12 @@ class Actions:
         self.add_menu_section(
             "LogicHub | image={} size=20 color=blue".format(self.image_to_base64_string("LH_menu_logichub.ico")))
         self.print_in_menu("LQL & Web UI")
-        self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql, keycmd="CmdOrCtrl+shift+p")
+        self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql, keyboard_shortcut="CmdOrCtrl+shift+p")
         self.make_action("(Beta) Pretty Print SQL options", action=None, alternate=True)
         self.make_action("Wrapped at 80 characters", self.logichub_pretty_print_sql_wrapped, menu_depth=2)
         self.make_action("Compact", self.logichub_pretty_print_sql_compact, menu_depth=2)
 
-        self.make_action("Tabs to commas", self.logichub_tabs_to_columns, keycmd="CmdOrCtrl+shift+t")
+        self.make_action("Tabs to commas", self.logichub_tabs_to_columns, keyboard_shortcut="CmdOrCtrl+shift+t")
         self.make_action("Tabs to commas (force lowercase)", self.logichub_tabs_to_columns_lowercase, alternate=True)
 
         self.make_action("Tabs to commas (sorted)", self.logichub_tabs_to_columns_sorted)
@@ -545,8 +545,8 @@ class Actions:
         self.make_action("Operator Start: autoJoinTables", self.logichub_operator_start_autoJoinTables)
         self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail)
         self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns)
-        self.make_action("Event File URL from File Name", self.logichub_event_file_URL_from_file_name)
-        self.make_action("Event File URL path (static)", self.logichub_event_file_URL_static, alternate=True)
+        self.make_action("Event File URL from File Name", self.logichub_event_file_url_from_file_name)
+        self.make_action("Event File URL path (static)", self.logichub_event_file_url_static, alternate=True)
 
         self.add_menu_divider_line(menu_depth=1)
         self.make_action("Spark Commands (from clipboard)", None, text_color="blue")
@@ -640,13 +640,13 @@ class Actions:
         # ToDo Update the actions above to give each an alternate version which runs without having to go into psql first
 
         self.print_in_menu("Integrations")
-        self.make_action("integrationsFiles path: LogicHub host", self.clipboard_integrationsFiles_path_logichub_host)
+        self.make_action("integrationsFiles path: LogicHub host", self.clipboard_integration_files_path_logichub_host)
         self.make_action("integrationsFiles path: LogicHub host (from file name)",
-                         self.clipboard_integrationsFiles_path_logichub_host_from_file_name, alternate=True)
+                         self.clipboard_integration_files_path_logichub_host_from_file_name, alternate=True)
         self.make_action("integrationsFiles path: integration containers",
-                         self.clipboard_integrationsFiles_path_integration_containers)
+                         self.clipboard_integration_files_path_integration_containers)
         self.make_action("integrationsFiles path: integration containers (from file name)",
-                         self.clipboard_integrationsFiles_path_integration_containers_from_file_name, alternate=True)
+                         self.clipboard_integration_files_path_integration_containers_from_file_name, alternate=True)
         self.make_action("integrationsFiles path: service container",
                          self.clipboard_integrationsFiles_path_service_container)
         self.make_action("integrationsFiles path: service container (from file name)",
@@ -781,7 +781,7 @@ class Actions:
             try:
                 with open(f"/Applications/{self.menu_type}.app/Contents/Info.plist", "r") as app_file:
                     _app_info = app_file.read()
-                    version_info = re.findall('<key>CFBundleVersion<[\s\S]*?<string>(.*?)</string>', _app_info)
+                    version_info = re.findall(r'<key>CFBundleVersion<[\s\S]*?<string>(.*?)</string>', _app_info)
                     app_version = version_info[0] if version_info else '-'
                     if app_version:
                         self.print_in_menu(f"{self.menu_type} version: {app_version}")
@@ -884,15 +884,15 @@ class Actions:
 
     def make_action(
             self, name, action, action_id=None, menu_depth=1, alternate=False,
-            terminal=False, text_color=None, keycmd=""):
+            terminal=False, text_color=None, keyboard_shortcut=""):
         menu_name = name
         if menu_depth:
             menu_name = '--' * menu_depth + ' ' + menu_name
         action_string = ''
         if alternate:
             action_string = action_string + ' alternate=true'
-        if keycmd:
-            action_string += ' | key=' + keycmd
+        if keyboard_shortcut:
+            action_string += ' | key=' + keyboard_shortcut
         if not action:
             if text_color:
                 self.print_in_menu(f'{menu_name} | {action_string} color={text_color}')
@@ -971,7 +971,6 @@ class Actions:
 
         :param input_str:
         :param wrap_after:
-        :param output_str:
         :return:
         """
         # Replace line breaks with spaces, then trim leading and trailing whitespace
@@ -1173,11 +1172,11 @@ class Actions:
             self.display_notification_error("Invalid input; table name cannot contain spaces")
         self.write_clipboard(f'jsonToColumns({_input}, "result")')
 
-    def logichub_event_file_URL_from_file_name(self):
+    def logichub_event_file_url_from_file_name(self):
         _input = self.read_clipboard()
         self.write_clipboard(f'file:///opt/docker/data/service/event_files/{_input}')
 
-    def logichub_event_file_URL_static(self):
+    def logichub_event_file_url_static(self):
         self.write_clipboard(f'file:///opt/docker/data/service/event_files/')
 
     @staticmethod
@@ -1509,7 +1508,7 @@ check_recent_user_activity
 
     def logichub_shell_own_instance_version(self):
         self.write_clipboard(
-            f"""curl -s --insecure https://localhost/api/version | grep -Po '"version" : "\K[^"\s]+'""")
+            rf"""curl -s --insecure https://localhost/api/version | grep -Po '"version" : "\K[^"\s]+'""")
 
     def copy_descriptor_file_using_image_tag(self):
         """
@@ -1545,7 +1544,7 @@ check_recent_user_activity
 
     def lh_service_shell_list_edited_descriptors(self):
         self.write_clipboard(
-            """ls -l /opt/docker/resources/integrations |grep -P "\.json" | grep -v "$(ls -l /opt/docker/resources/integrations |grep -P '\.json$' | awk '{print $6" "$7" "$8}'|sort|uniq -c|sed -E 's/^ *//'|sort -nr|head -n1|grep -Po ' \K.*')\"""")
+            r"""ls -l /opt/docker/resources/integrations |grep -P "\.json" | grep -v "$(ls -l /opt/docker/resources/integrations |grep -P '\.json$' | awk '{print $6" "$7" "$8}'|sort|uniq -c|sed -E 's/^ *//'|sort -nr|head -n1|grep -Po ' \K.*')" """)
 
     ############################################################################
     # LogicHub -> Docker
@@ -1628,17 +1627,17 @@ check_recent_user_activity
     ############################################################################
     # LogicHub -> Integrations
 
-    def clipboard_integrationsFiles_path_logichub_host(self):
+    def clipboard_integration_files_path_logichub_host(self):
         self.write_clipboard("/var/lib/docker/volumes/logichub_data/_data/shared/integrationsFiles/")
 
-    def clipboard_integrationsFiles_path_logichub_host_from_file_name(self):
+    def clipboard_integration_files_path_logichub_host_from_file_name(self):
         self.write_clipboard(
             "/var/lib/docker/volumes/logichub_data/_data/shared/integrationsFiles/{}".format(self.read_clipboard()))
 
-    def clipboard_integrationsFiles_path_integration_containers(self):
+    def clipboard_integration_files_path_integration_containers(self):
         self.write_clipboard("/opt/files/shared/integrationsFiles/")
 
-    def clipboard_integrationsFiles_path_integration_containers_from_file_name(self):
+    def clipboard_integration_files_path_integration_containers_from_file_name(self):
         self.write_clipboard("/opt/files/shared/integrationsFiles/{}".format(self.read_clipboard()))
 
     def clipboard_integrationsFiles_path_service_container(self):
@@ -1786,7 +1785,7 @@ check_recent_user_activity
     # ToDo Finish this or find an alternate way of helping with managing loopback aliases
     # Don't enable the following until this script is updated to take startup scripts into account
     def do_terminate_loopback_aliases(self):
-        """
+        r"""
         from the old bash version:
             echo
             # When ready, add the following action to the bottom section:
