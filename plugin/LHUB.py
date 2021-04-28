@@ -825,8 +825,9 @@ class Actions:
     def print_in_menu(self, msg):
         self.menu_output += f"{msg}\n"
 
-    def fail_action_with_exception(self, trace: traceback.format_exc = None, exception: BaseException = None,
-                                   print_stderr=False):
+    def fail_action_with_exception(
+            self, trace: traceback.format_exc = None,
+            exception: BaseException = None, print_stderr=False):
         if not trace:
             trace = traceback.format_exc()
         self.write_clipboard(trace, skip_notification=True)
@@ -872,8 +873,9 @@ class Actions:
         # Set status bar text and/or logo
         self.print_in_menu(self.status)
 
-    def make_action(self, name, action, action_id=None, menu_depth=1, alternate=False, terminal=False, text_color=None,
-                    keycmd=""):
+    def make_action(
+            self, name, action, action_id=None, menu_depth=1, alternate=False,
+            terminal=False, text_color=None, keycmd=""):
         menu_name = name
         if menu_depth:
             menu_name = '--' * menu_depth + ' ' + menu_name
@@ -897,7 +899,7 @@ class Actions:
         self.action_list[action_id] = _var
         terminal = str(terminal).lower()
         self.print_in_menu(
-            f'{menu_name} | {action_string} | bash="{self.script_name}" | param1="{action_id}" | terminal={terminal} ')
+            f'{menu_name} | {action_string} | bash="{self.script_name}" | param1="{action_id}" | terminal={terminal}')
         return _var
 
     @staticmethod
@@ -974,8 +976,9 @@ class Actions:
         # If wrapped in ticks, strip those off. We no longer require them in LogicHub.
         _output = re.sub(r'^`|(?<!\\)`$', '', _output)
 
-        _output = sqlparse.format(_output, reindent=True, keyword_case='upper', indent_width=4, wrap_after=wrap_after,
-                                  identifier_case=None)
+        _output = sqlparse.format(
+            _output, reindent=True, keyword_case='upper', indent_width=4,
+            wrap_after=wrap_after, identifier_case=None)
 
         # nit: if just selecting "*" then drop that initial newline. no reason to drop "FROM" to the next row.
         if re.match(r"^SELECT \*\nFROM ", _output):
@@ -2015,8 +2018,9 @@ check_recent_user_activity
                 _output = [temp_map_input_as_strings[k] for k in sorted(temp_map_input_as_strings.keys())]
         return _output
 
-    def _process_json_clipboard(self, sort_output=None, format_output=False, fix_output=False, compact_spacing=False,
-                                format_auto=False, return_obj=False):
+    def _process_json_clipboard(
+            self, sort_output=None, format_output=False, fix_output=False,
+            compact_spacing=False, format_auto=False, return_obj=False):
         """
         One method to standardize reading JSON from the clipboard, processing as needed, and updating the clipboard
 
