@@ -565,6 +565,11 @@ class Actions:
 
         self.make_action("schema_of_json: Create column from JSON clipboard", self.action_json_to_schema_of_json)
 
+        self.add_menu_divider_line(menu_depth=1)
+        self.make_action("DSL Commands", None, text_color="blue")
+
+        self.make_action("Integration Error Check AND forceFail (from table name)", self.logichub_dsl_integ_error_check_and_force_fail)
+
         self.print_in_menu("LogicHub Troubleshooting")
         self.make_action("Sanitize playbook JSON for comparison (from clipboard)", self.sanitize_logichub_json)
 
@@ -1105,6 +1110,14 @@ class Actions:
 
     def logichub_sql_start_with_integ_error_check_without_table_name(self):
         self.write_clipboard(self._logichub_integ_error_sql())
+
+    def logichub_dsl_integ_error_check_and_force_fail(self):
+        _input = self.read_clipboard()
+        if ' ' in _input:
+            self.display_notification_error("Invalid input; table name cannot contain spaces")
+        first_table = self._logichub_integ_error_sql(_input)
+        self.write_clipboard(
+            f"[{first_table}] as error_check\n| [forceFail(error_check, \"integ_error\")] as fail_if_error\n| [dropColumns(fail_if_error, \"integ_error\", \"exit_code\", \"stdout\", \"stderr\")] as final_output")
 
     def logichub_sql_start_from_tabs(self):
         _columns_formatted = self._split_tabs_to_columns(update_clipboard=False)
