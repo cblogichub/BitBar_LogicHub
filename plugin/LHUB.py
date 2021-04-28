@@ -476,6 +476,7 @@ class Actions:
     # Defaults
     ssh_tunnel_configs = []
     port_redirect_configs = []
+    __reserved_keyboard_shortcuts = {}
 
     def __init__(self, config):
         me = psutil.Process()
@@ -892,6 +893,9 @@ class Actions:
         if alternate:
             action_string = action_string + ' alternate=true'
         if keyboard_shortcut:
+            if keyboard_shortcut in self.__reserved_keyboard_shortcuts:
+                raise ValueError(f'Keyboard shortcut "{keyboard_shortcut}" already assigned to action "{self.__reserved_keyboard_shortcuts[keyboard_shortcut]}" and cannot be mapped to action {name}')
+            self.__reserved_keyboard_shortcuts[keyboard_shortcut] = name
             action_string += ' | key=' + keyboard_shortcut
         if not action:
             if text_color:
