@@ -2373,6 +2373,7 @@ check_recent_user_activity
             self.display_notification_error("Failed to decode URL string")
 
     def execute_plugin(self, action):
+        log.debug(f"Executing action: {action}")
         if not action:
             self.print_menu_output()
             return
