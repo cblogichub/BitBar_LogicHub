@@ -66,7 +66,7 @@ if not chromedriver:
 user_config_file = "logichub_tools.ini"
 
 # Will be updated if enabled via the config file
-debug_enabled = False
+debug_enabled = True
 
 
 class Log:
@@ -501,12 +501,12 @@ class Actions:
 
         self.add_menu_section("LogicHub | image={} size=20 color=blue".format(self.image_to_base64_string("LH_menu_logichub.ico")))
         self.print_in_menu("LQL & Web UI")
-        self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql)
+        self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql, keycmd="CmdOrCtrl+shift+p")
         self.make_action("(Beta) Pretty Print SQL options", action=None, alternate=True)
         self.make_action("Wrapped at 80 characters", self.logichub_pretty_print_sql_wrapped, menu_depth=2)
         self.make_action("Compact", self.logichub_pretty_print_sql_compact, menu_depth=2)
 
-        self.make_action("Tabs to commas", self.logichub_tabs_to_columns)
+        self.make_action("Tabs to commas", self.logichub_tabs_to_columns, keycmd="CmdOrCtrl+shift+t")
         self.make_action("Tabs to commas (force lowercase)", self.logichub_tabs_to_columns_lowercase, alternate=True)
 
         self.make_action("Tabs to commas (sorted)", self.logichub_tabs_to_columns_sorted)
@@ -833,13 +833,18 @@ class Actions:
         # Set status bar text and/or logo
         self.print_in_menu(self.status)
 
-    def make_action(self, name, action, action_id=None, menu_depth=1, alternate=False, terminal=False, text_color=None):
+    def make_action(self, name, action, action_id=None, menu_depth=1, alternate=False, terminal=False, text_color=None, keycmd=False):
         menu_name = name
+        shortcut_key = ''
+        if keycmd:
+        	shortcut_key = keycmd
         if menu_depth:
             menu_name = '--' * menu_depth + ' ' + menu_name
         action_string = ''
         if alternate:
             action_string = action_string + ' alternate=true'
+        if keycmd:
+        	action_string += ' key=' + keycmd
         if not action:
             if text_color:
                 self.print_in_menu(f'{menu_name} | {action_string} color={text_color}')
@@ -854,7 +859,7 @@ class Actions:
         _var = action_tuple(action_id, name, action)
         self.action_list[action_id] = _var
         terminal = str(terminal).lower()
-        self.print_in_menu(f'{menu_name} | {action_string} bash="{self.script_name}" param1="{action_id}" terminal={terminal}')
+        self.print_in_menu(f'{menu_name} | {action_string} | bash="{self.script_name}" | param1="{action_id}" | terminal={terminal} ')
         return _var
 
     @staticmethod
