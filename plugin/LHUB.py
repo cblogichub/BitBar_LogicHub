@@ -44,7 +44,6 @@ chrome_driver_default_paths = [
 chromedriver = None
 chrome_driver_error = None
 
-
 try:
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
@@ -61,18 +60,18 @@ else:
 if not chromedriver:
     chrome_driver_error = "Chrome driver not found"
 
-
 # Global static variables
 user_config_file = "logichub_tools.ini"
 
 # Will be updated if enabled via the config file
-debug_enabled = True
+debug_enabled = False
 
 
 class Log:
     """
     Simple class for debug logging for the time being. May eventually replace with a real Logger
     """
+
     @property
     def debug_enabled(self):
         return debug_enabled
@@ -160,6 +159,7 @@ class Reusable:
         :param bool capture_output: Whether to capture the output or allow it to pass to the terminal. (Usually True, but False for things like prompting for the sudo password)
         :return:
         """
+
         def _validate_command(cmd: str or bytes or list or tuple):
             """
             Verify command format. Accepts string, bytes, list of strings, or tuple of strings,
@@ -256,7 +256,8 @@ class Reusable:
                 elif v is None:
                     pass
                 elif k in rtn_dct and type(v) != type(rtn_dct[k]):
-                    raise TypeError(f"Overlapping keys exist with different types: original is {type(rtn_dct[k]).__name__}, new value is {type(v).__name__}")
+                    raise TypeError(
+                        f"Overlapping keys exist with different types: original is {type(rtn_dct[k]).__name__}, new value is {type(v).__name__}")
                 elif isinstance(rtn_dct[k], dict) and isinstance(merge_dct[k], collections.abc.Mapping):
                     rtn_dct[k] = Reusable.dict_merge(rtn_dct[k], merge_dct[k], add_keys=add_keys)
                 elif isinstance(v, list):
@@ -451,13 +452,15 @@ class Config:
             local_user=kwargs.get("local_user", os.environ.get("USER")),
             ssh_user=kwargs.get("ssh_user", os.environ.get("USER")),
             ssh_key=kwargs.get("ssh_key", "id_rsa"),
-            os_theme=kwargs.get("os_theme", os.popen('defaults read -g AppleInterfaceStyle 2> /dev/null').read().strip() or "Light"),
+            os_theme=kwargs.get("os_theme", os.popen(
+                'defaults read -g AppleInterfaceStyle 2> /dev/null').read().strip() or "Light"),
             default_loopback_interface=kwargs.get("default_loopback_interface", "lo0"),
             status_bar_style=kwargs.get("status_bar_style", "logo"),
             status_bar_label=kwargs.get("status_bar_label", "LHUB"),
             status_bar_icon_size=kwargs.get("status_bar_icon_size", "large"),
             status_bar_text_color=kwargs.get("status_bar_text_color", "black"),
-            clipboard_update_notifications=Reusable.convert_boolean(kwargs.get("clipboard_update_notifications", False)),
+            clipboard_update_notifications=Reusable.convert_boolean(
+                kwargs.get("clipboard_update_notifications", False)),
             debug_output_enabled=Reusable.convert_boolean(kwargs.get("debug_output_enabled", False)),
             jira_default_prefix=kwargs.get("jira_default_prefix", "LHUB")
         )
@@ -499,7 +502,8 @@ class Actions:
 
         # ------------ Menu Section: LogicHub ------------ #
 
-        self.add_menu_section("LogicHub | image={} size=20 color=blue".format(self.image_to_base64_string("LH_menu_logichub.ico")))
+        self.add_menu_section(
+            "LogicHub | image={} size=20 color=blue".format(self.image_to_base64_string("LH_menu_logichub.ico")))
         self.print_in_menu("LQL & Web UI")
         self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql, keycmd="CmdOrCtrl+shift+p")
         self.make_action("(Beta) Pretty Print SQL options", action=None, alternate=True)
@@ -510,25 +514,34 @@ class Actions:
         self.make_action("Tabs to commas (force lowercase)", self.logichub_tabs_to_columns_lowercase, alternate=True)
 
         self.make_action("Tabs to commas (sorted)", self.logichub_tabs_to_columns_sorted)
-        self.make_action("Tabs to commas (sorted, force lowercase)", self.logichub_tabs_to_columns_sorted_lowercase, alternate=True)
+        self.make_action("Tabs to commas (sorted, force lowercase)", self.logichub_tabs_to_columns_sorted_lowercase,
+                         alternate=True)
 
         self.make_action("Tabs to commas & quotes", self.logichub_tabs_to_columns_and_quotes)
-        self.make_action("Tabs to commas & quotes (force lowercase)", self.logichub_tabs_to_columns_and_quotes_lowercase, alternate=True)
+        self.make_action("Tabs to commas & quotes (force lowercase)",
+                         self.logichub_tabs_to_columns_and_quotes_lowercase, alternate=True)
 
         self.make_action("Tabs to commas & quotes (sorted)", self.logichub_tabs_to_columns_and_quotes_sorted)
-        self.make_action("Tabs to commas & quotes (sorted, force lowercase)", self.logichub_tabs_to_columns_and_quotes_sorted_lowercase, alternate=True)
+        self.make_action("Tabs to commas & quotes (sorted, force lowercase)",
+                         self.logichub_tabs_to_columns_and_quotes_sorted_lowercase, alternate=True)
 
         self.make_action("SQL New (from table name)", self.logichub_sql_start_from_table_name)
         self.make_action("SQL New (without table name)", self.logichub_sql_start_without_table_name, alternate=True)
-        self.make_action("SQL New with Integration Error Check (from table name)", self.logichub_sql_start_with_integ_error_check)
-        self.make_action("SQL New with Integration Error Check (without table name)", self.logichub_sql_start_with_integ_error_check_without_table_name, alternate=True)
+        self.make_action("SQL New with Integration Error Check (from table name)",
+                         self.logichub_sql_start_with_integ_error_check)
+        self.make_action("SQL New with Integration Error Check (without table name)",
+                         self.logichub_sql_start_with_integ_error_check_without_table_name, alternate=True)
         self.make_action("SQL Start from spaced strings", self.logichub_sql_start_from_tabs)
         self.make_action("SQL Start from spaced strings (sorted)", self.logichub_sql_start_from_tabs_sorted)
         self.make_action("SQL Start from spaced strings (distinct)", self.logichub_sql_start_from_tabs_distinct)
-        self.make_action("SQL Start from spaced strings (join with left columns)", self.logichub_sql_start_from_tabs_join_left)
-        self.make_action("SQL Start from spaced strings (join, left columns only)", self.logichub_tabs_to_columns_left_join, alternate=True)
-        self.make_action("SQL Start from spaced strings (join with right columns)", self.logichub_sql_start_from_tabs_join_right)
-        self.make_action("SQL Start from spaced strings (join, right columns only)", self.logichub_tabs_to_columns_right_join, alternate=True)
+        self.make_action("SQL Start from spaced strings (join with left columns)",
+                         self.logichub_sql_start_from_tabs_join_left)
+        self.make_action("SQL Start from spaced strings (join, left columns only)",
+                         self.logichub_tabs_to_columns_left_join, alternate=True)
+        self.make_action("SQL Start from spaced strings (join with right columns)",
+                         self.logichub_sql_start_from_tabs_join_right)
+        self.make_action("SQL Start from spaced strings (join, right columns only)",
+                         self.logichub_tabs_to_columns_right_join, alternate=True)
         self.make_action("Operator Start: autoJoinTables", self.logichub_operator_start_autoJoinTables)
         self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail)
         self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns)
@@ -540,13 +553,15 @@ class Actions:
 
         # Full version of "from_json" action, which includes all nested dicts and lists
         self.make_action("from_json: full", self.action_spark_from_json)
-        self.make_action("from_json: full, allow invalid keys", self.action_spark_from_json_allow_invalid, alternate=True)
+        self.make_action("from_json: full, allow invalid keys", self.action_spark_from_json_allow_invalid,
+                         alternate=True)
 
         # Lightweight version of "from_json" action, which only captures root keys
         # If a root key's value is a dict, then it will be stored as a string.
         # If it's a list, then it will be stored as a list of strings.
         self.make_action("from_json: no recursion", self.action_spark_from_json_non_recursive)
-        self.make_action("from_json: no recursion, allow invalid keys", self.action_spark_from_json_non_recursive_allow_invalid, alternate=True)
+        self.make_action("from_json: no recursion, allow invalid keys",
+                         self.action_spark_from_json_non_recursive_allow_invalid, alternate=True)
 
         self.make_action("schema_of_json: Create column from JSON clipboard", self.action_json_to_schema_of_json)
 
@@ -575,10 +590,12 @@ class Actions:
         self.make_action("psql shell", self.action_docker_psql_shell)
 
         self.make_action("psql query without shell", self.action_docker_psql_without_shell)
-        self.make_action("psql query without shell (query from clipboard)", self.action_docker_psql_without_shell_from_clipboard, alternate=True)
+        self.make_action("psql query without shell (query from clipboard)",
+                         self.action_docker_psql_without_shell_from_clipboard, alternate=True)
 
         self.make_action("psql query without shell, json output", self.action_docker_psql_without_shell_json)
-        self.make_action("psql query without shell, json output (query from clipboard)", self.action_docker_psql_without_shell_json_from_clipboard, alternate=True)
+        self.make_action("psql query without shell, json output (query from clipboard)",
+                         self.action_docker_psql_without_shell_json_from_clipboard, alternate=True)
 
         self.print_in_menu("DB: Postgres")
 
@@ -587,10 +604,13 @@ class Actions:
         self.make_action("List Descriptors w/ Docker Images", self.db_postgres_descriptors_and_docker_images)
 
         self.make_action("List Instances w/ Docker Images", self.db_postgres_instances_and_docker_images)
-        self.make_action("List Instances w/ Docker Images (extended)", self.db_postgres_instances_and_docker_images_extended, alternate=True)
+        self.make_action("List Instances w/ Docker Images (extended)",
+                         self.db_postgres_instances_and_docker_images_extended, alternate=True)
 
-        self.make_action("List Instances w/ Docker Images, exclude image in clipboard", self.db_postgres_instances_and_docker_images_exclude_image)
-        self.make_action("List Instances w/ Docker Images (extended), exclude image in clipboard", self.db_postgres_instances_and_docker_images_extended_exclude_image, alternate=True)
+        self.make_action("List Instances w/ Docker Images, exclude image in clipboard",
+                         self.db_postgres_instances_and_docker_images_exclude_image)
+        self.make_action("List Instances w/ Docker Images (extended), exclude image in clipboard",
+                         self.db_postgres_instances_and_docker_images_extended_exclude_image, alternate=True)
 
         self.add_menu_divider_line(menu_depth=1)
         self.make_action("Streams and Batches", None, text_color="blue")
@@ -612,28 +632,39 @@ class Actions:
 
         self.print_in_menu("Integrations")
         self.make_action("integrationsFiles path: LogicHub host", self.clipboard_integrationsFiles_path_logichub_host)
-        self.make_action("integrationsFiles path: LogicHub host (from file name)", self.clipboard_integrationsFiles_path_logichub_host_from_file_name, alternate=True)
-        self.make_action("integrationsFiles path: integration containers", self.clipboard_integrationsFiles_path_integration_containers)
-        self.make_action("integrationsFiles path: integration containers (from file name)", self.clipboard_integrationsFiles_path_integration_containers_from_file_name, alternate=True)
-        self.make_action("integrationsFiles path: service container", self.clipboard_integrationsFiles_path_service_container)
-        self.make_action("integrationsFiles path: service container (from file name)", self.clipboard_integrationsFiles_path_service_container_from_file_name, alternate=True)
+        self.make_action("integrationsFiles path: LogicHub host (from file name)",
+                         self.clipboard_integrationsFiles_path_logichub_host_from_file_name, alternate=True)
+        self.make_action("integrationsFiles path: integration containers",
+                         self.clipboard_integrationsFiles_path_integration_containers)
+        self.make_action("integrationsFiles path: integration containers (from file name)",
+                         self.clipboard_integrationsFiles_path_integration_containers_from_file_name, alternate=True)
+        self.make_action("integrationsFiles path: service container",
+                         self.clipboard_integrationsFiles_path_service_container)
+        self.make_action("integrationsFiles path: service container (from file name)",
+                         self.clipboard_integrationsFiles_path_service_container_from_file_name, alternate=True)
 
         self.make_action("Copy descriptor file using its image tag", self.copy_descriptor_file_using_image_tag)
-        self.make_action("Copy descriptor file using its image tag, then edit original", self.copy_descriptor_file_using_image_tag_then_edit_original, alternate=True)
+        self.make_action("Copy descriptor file using its image tag, then edit original",
+                         self.copy_descriptor_file_using_image_tag_then_edit_original, alternate=True)
 
-        self.make_action("Open bash in docker container by product name", self.open_integration_container_by_product_name)
+        self.make_action("Open bash in docker container by product name",
+                         self.open_integration_container_by_product_name)
 
         self.print_in_menu("LogicHub Upgrades")
         self.make_action("Upgrade Prep: Visual inspection", self.logichub_upgrade_prep_verifications)
         self.make_action("Upgrade Prep: Backups (run as logichub/centos!)", self.logichub_upgrade_prep_backups)
-        self.make_action("Upgrade Prep: Backups Lite (skip logs and LH backup script)", self.logichub_upgrade_prep_backups_lite, alternate=True)
+        self.make_action("Upgrade Prep: Backups Lite (skip logs and LH backup script)",
+                         self.logichub_upgrade_prep_backups_lite, alternate=True)
 
         self.add_menu_divider_line(menu_depth=1)
 
-        self.make_action("Upgrade Command (from milestone version in clipboard)", self.logichub_upgrade_command_from_clipboard)
+        self.make_action("Upgrade Command (from milestone version in clipboard)",
+                         self.logichub_upgrade_command_from_clipboard)
         self.make_action("Upgrade Command (static)", self.logichub_upgrade_command_static, alternate=True)
-        self.make_action("Upgrade Command with Backup Script (from milestone version in clipboard)", self.logichub_upgrade_command_from_clipboard_with_backup_script)
-        self.make_action("Upgrade Command with Backup Script (static)", self.logichub_upgrade_command_static_with_backup_script, alternate=True)
+        self.make_action("Upgrade Command with Backup Script (from milestone version in clipboard)",
+                         self.logichub_upgrade_command_from_clipboard_with_backup_script)
+        self.make_action("Upgrade Command with Backup Script (static)",
+                         self.logichub_upgrade_command_static_with_backup_script, alternate=True)
 
         # ------------ Menu Section: TECH ------------ #
 
@@ -681,19 +712,25 @@ class Actions:
 
         # Visual Mode, Permanent
         self.make_action("vim: visual mode - disable permanently", self.shell_vim_visual_mode_disable_permanently)
-        self.make_action("vim: visual mode - enable permanently", self.shell_vim_visual_mode_enable_permanently, alternate=True)
+        self.make_action("vim: visual mode - enable permanently", self.shell_vim_visual_mode_enable_permanently,
+                         alternate=True)
 
         # Visual Mode, Temporary (within an active session)
-        self.make_action("vim: visual mode - disable within a session", self.shell_vim_visual_mode_disable_within_session)
-        self.make_action("vim: visual mode - enable within a session", self.shell_vim_visual_mode_enable_within_session, alternate=True)
+        self.make_action("vim: visual mode - disable within a session",
+                         self.shell_vim_visual_mode_disable_within_session)
+        self.make_action("vim: visual mode - enable within a session", self.shell_vim_visual_mode_enable_within_session,
+                         alternate=True)
 
         # Show Line Numbers, Permanent
         self.make_action("vim: line numbers - enable permanently", self.shell_vim_line_numbers_enable_permanently)
-        self.make_action("vim: line numbers - disable permanently", self.shell_vim_line_numbers_disable_permanently, alternate=True)
+        self.make_action("vim: line numbers - disable permanently", self.shell_vim_line_numbers_disable_permanently,
+                         alternate=True)
 
         # Show Line Numbers, Temporary (within an active session)
-        self.make_action("vim: line numbers - enable within a session", self.shell_vim_line_numbers_enable_within_session)
-        self.make_action("vim: line numbers - disable within a session", self.shell_vim_line_numbers_disable_within_session, alternate=True)
+        self.make_action("vim: line numbers - enable within a session",
+                         self.shell_vim_line_numbers_enable_within_session)
+        self.make_action("vim: line numbers - disable within a session",
+                         self.shell_vim_line_numbers_disable_within_session, alternate=True)
 
         # Disable visual mode AND enable line numbers all at once
         self.make_action("vim: Set both permanently", self.shell_vim_set_both_permanently)
@@ -710,7 +747,8 @@ class Actions:
         # First check whether there are any custom networking configs (i.e. ssh tunnels or port redirects)
         self.check_for_custom_networking_configs()
 
-        self.add_menu_section("Networking | image={} size=20 color=blue".format(self.image_to_base64_string("LH_menu_ssh.png")))
+        self.add_menu_section(
+            "Networking | image={} size=20 color=blue".format(self.image_to_base64_string("LH_menu_ssh.png")))
 
         self.print_in_menu("Reset")
         self.make_action("Terminate SSH tunnels", self.action_terminate_tunnels, terminal=True)
@@ -787,7 +825,8 @@ class Actions:
     def print_in_menu(self, msg):
         self.menu_output += f"{msg}\n"
 
-    def fail_action_with_exception(self, trace: traceback.format_exc = None, exception: BaseException = None, print_stderr=False):
+    def fail_action_with_exception(self, trace: traceback.format_exc = None, exception: BaseException = None,
+                                   print_stderr=False):
         if not trace:
             trace = traceback.format_exc()
         self.write_clipboard(trace, skip_notification=True)
@@ -833,18 +872,16 @@ class Actions:
         # Set status bar text and/or logo
         self.print_in_menu(self.status)
 
-    def make_action(self, name, action, action_id=None, menu_depth=1, alternate=False, terminal=False, text_color=None, keycmd=False):
+    def make_action(self, name, action, action_id=None, menu_depth=1, alternate=False, terminal=False, text_color=None,
+                    keycmd=""):
         menu_name = name
-        shortcut_key = ''
-        if keycmd:
-        	shortcut_key = keycmd
         if menu_depth:
             menu_name = '--' * menu_depth + ' ' + menu_name
         action_string = ''
         if alternate:
             action_string = action_string + ' alternate=true'
         if keycmd:
-        	action_string += ' key=' + keycmd
+            action_string += ' | key=' + keycmd
         if not action:
             if text_color:
                 self.print_in_menu(f'{menu_name} | {action_string} color={text_color}')
@@ -859,7 +896,8 @@ class Actions:
         _var = action_tuple(action_id, name, action)
         self.action_list[action_id] = _var
         terminal = str(terminal).lower()
-        self.print_in_menu(f'{menu_name} | {action_string} | bash="{self.script_name}" | param1="{action_id}" | terminal={terminal} ')
+        self.print_in_menu(
+            f'{menu_name} | {action_string} | bash="{self.script_name}" | param1="{action_id}" | terminal={terminal} ')
         return _var
 
     @staticmethod
@@ -936,7 +974,8 @@ class Actions:
         # If wrapped in ticks, strip those off. We no longer require them in LogicHub.
         _output = re.sub(r'^`|(?<!\\)`$', '', _output)
 
-        _output = sqlparse.format(_output, reindent=True, keyword_case='upper', indent_width=4, wrap_after=wrap_after, identifier_case=None)
+        _output = sqlparse.format(_output, reindent=True, keyword_case='upper', indent_width=4, wrap_after=wrap_after,
+                                  identifier_case=None)
 
         # nit: if just selecting "*" then drop that initial newline. no reason to drop "FROM" to the next row.
         if re.match(r"^SELECT \*\nFROM ", _output):
@@ -1400,7 +1439,7 @@ class Actions:
             "VIRTUAL TOTAL": total_time,
         }
         _stats_for_csv.update(_stats_only)
-        dict_data =[{"node_name": x, "time": y} for x, y in _stats_for_csv.items()]
+        dict_data = [{"node_name": x, "time": y} for x, y in _stats_for_csv.items()]
 
         with open(csv_file, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=['node_name', 'time'])
@@ -1437,10 +1476,12 @@ check_recent_user_activity
 """)
 
     def logichub_stop_and_start_services_in_one_line(self):
-        self.write_clipboard("sudo /opt/logichub/scripts/stop_logichub_sw.sh ; sleep 5 ; sudo /opt/logichub/scripts/start_logichub_sw.sh")
+        self.write_clipboard(
+            "sudo /opt/logichub/scripts/stop_logichub_sw.sh ; sleep 5 ; sudo /opt/logichub/scripts/start_logichub_sw.sh")
 
     def logichub_shell_own_instance_version(self):
-        self.write_clipboard(f"""curl -s --insecure https://localhost/api/version | grep -Po '"version" : "\K[^"\s]+'""")
+        self.write_clipboard(
+            f"""curl -s --insecure https://localhost/api/version | grep -Po '"version" : "\K[^"\s]+'""")
 
     def copy_descriptor_file_using_image_tag(self):
         """
@@ -1449,7 +1490,8 @@ check_recent_user_activity
         :return:
         """
         _input = self.read_clipboard()
-        self.write_clipboard(f"""cp -p "{_input}" "{_input}.$(grep -Po '"image"[ \\t]*:[ \\t]*"\\K[^"]+' "{_input}" | sed -E 's/^.*://')-$(date +'%Y%m%d_%H%M%S')" """)
+        self.write_clipboard(
+            f"""cp -p "{_input}" "{_input}.$(grep -Po '"image"[ \\t]*:[ \\t]*"\\K[^"]+' "{_input}" | sed -E 's/^.*://')-$(date +'%Y%m%d_%H%M%S')" """)
 
     def copy_descriptor_file_using_image_tag_then_edit_original(self):
         """
@@ -1458,7 +1500,8 @@ check_recent_user_activity
         :return:
         """
         _input = self.read_clipboard()
-        self.write_clipboard(f"""cp -p "{_input}" "{_input}.$(grep -Po '"image"[ \\t]*:[ \\t]*"\\K[^"]+' "{_input}" | sed -E 's/^.*://')-$(date +'%Y%m%d_%H%M%S')"; vi "{_input}" """)
+        self.write_clipboard(
+            f"""cp -p "{_input}" "{_input}.$(grep -Po '"image"[ \\t]*:[ \\t]*"\\K[^"]+' "{_input}" | sed -E 's/^.*://')-$(date +'%Y%m%d_%H%M%S')"; vi "{_input}" """)
 
     def open_integration_container_by_product_name(self):
         """
@@ -1466,13 +1509,15 @@ check_recent_user_activity
 
         :return:
         """
-        self.write_clipboard(r"""lh_open_docker_image_by_product_name() { search_str=$1; [[ -z $search_str ]] && echo && read -p "Type part of the product name: " -r search_str; [[ -z $search_str ]] && echo "No search string provided; aborted" && return; mapfile -t newest < <(docker ps|grep -iP "lhub-managed-integrations.logichub.[^.\s]*$search_str"|head -n1|sed -E 's/ +/\n/g'); [[ -z ${newest[0]} ]] && echo "No matching docker image found" && return; echo; echo "${newest[-1]}"|grep -Po 'logichub\.\K[^.]+'; printf 'Image ID: %s\nImage Name: %s\n\n' ${newest[0]} ${newest[1]}; docker exec -it "${newest[0]}" /bin/bash; }; lh_open_docker_image_by_product_name """)
+        self.write_clipboard(
+            r"""lh_open_docker_image_by_product_name() { search_str=$1; [[ -z $search_str ]] && echo && read -p "Type part of the product name: " -r search_str; [[ -z $search_str ]] && echo "No search string provided; aborted" && return; mapfile -t newest < <(docker ps|grep -iP "lhub-managed-integrations.logichub.[^.\s]*$search_str"|head -n1|sed -E 's/ +/\n/g'); [[ -z ${newest[0]} ]] && echo "No matching docker image found" && return; echo; echo "${newest[-1]}"|grep -Po 'logichub\.\K[^.]+'; printf 'Image ID: %s\nImage Name: %s\n\n' ${newest[0]} ${newest[1]}; docker exec -it "${newest[0]}" /bin/bash; }; lh_open_docker_image_by_product_name """)
 
     ############################################################################
     # LogicHub -> Shell: Service Container
 
     def lh_service_shell_list_edited_descriptors(self):
-        self.write_clipboard("""ls -l /opt/docker/resources/integrations |grep -P "\.json" | grep -v "$(ls -l /opt/docker/resources/integrations |grep -P '\.json$' | awk '{print $6" "$7" "$8}'|sort|uniq -c|sed -E 's/^ *//'|sort -nr|head -n1|grep -Po ' \K.*')\"""")
+        self.write_clipboard(
+            """ls -l /opt/docker/resources/integrations |grep -P "\.json" | grep -v "$(ls -l /opt/docker/resources/integrations |grep -P '\.json$' | awk '{print $6" "$7" "$8}'|sort|uniq -c|sed -E 's/^ *//'|sort -nr|head -n1|grep -Po ' \K.*')\"""")
 
     ############################################################################
     # LogicHub -> Docker
@@ -1492,7 +1537,8 @@ check_recent_user_activity
 
     def action_docker_psql_without_shell_json(self, text=None):
         text = (text if text else "...").replace('"', r'\"')
-        self.write_clipboard(f'docker exec -it postgres psql -P format=unaligned --u daemon lh -t -c "select json_agg(a) as results from ({text}) a"')
+        self.write_clipboard(
+            f'docker exec -it postgres psql -P format=unaligned --u daemon lh -t -c "select json_agg(a) as results from ({text}) a"')
 
     def action_docker_psql_without_shell_json_from_clipboard(self):
         self.action_docker_psql_without_shell_json(text=self.read_clipboard())
@@ -1501,7 +1547,8 @@ check_recent_user_activity
     # LogicHub -> DB: Postgres
 
     def db_postgres_descriptors_and_docker_images(self):
-        self.write_clipboard("""select id, modified, substring(descriptor from '"image" *: *"([^"]*?)') as docker_image from integration_descriptors order by id;""")
+        self.write_clipboard(
+            """select id, modified, substring(descriptor from '"image" *: *"([^"]*?)') as docker_image from integration_descriptors order by id;""")
 
     def _build_query_instances_and_docker_images(self, extended=False, exclude=False):
         extended_fields = "" if not extended \
@@ -1557,7 +1604,8 @@ check_recent_user_activity
         self.write_clipboard("/var/lib/docker/volumes/logichub_data/_data/shared/integrationsFiles/")
 
     def clipboard_integrationsFiles_path_logichub_host_from_file_name(self):
-        self.write_clipboard("/var/lib/docker/volumes/logichub_data/_data/shared/integrationsFiles/{}".format(self.read_clipboard()))
+        self.write_clipboard(
+            "/var/lib/docker/volumes/logichub_data/_data/shared/integrationsFiles/{}".format(self.read_clipboard()))
 
     def clipboard_integrationsFiles_path_integration_containers(self):
         self.write_clipboard("/opt/files/shared/integrationsFiles/")
@@ -1654,9 +1702,11 @@ check_recent_user_activity
             for _var in self.config.menu_networking.configs:
                 if isinstance(self.config.menu_networking.configs[_var], dict):
                     if self.config.menu_networking.configs[_var].get("type") == "ssh":
-                        self.ssh_tunnel_configs.append((self.config.menu_networking.configs[_var].get("name", _var), f"ssh_tunnel_custom_{_var}"))
+                        self.ssh_tunnel_configs.append(
+                            (self.config.menu_networking.configs[_var].get("name", _var), f"ssh_tunnel_custom_{_var}"))
                     elif self.config.menu_networking.configs[_var].get("type") == "redirect":
-                        self.port_redirect_configs.append((self.config.menu_networking.configs[_var].get("name"), f"port_redirect_custom_{_var}"))
+                        self.port_redirect_configs.append(
+                            (self.config.menu_networking.configs[_var].get("name"), f"port_redirect_custom_{_var}"))
 
     ############################################################################
     # Networking -> Reset
@@ -1965,7 +2015,8 @@ check_recent_user_activity
                 _output = [temp_map_input_as_strings[k] for k in sorted(temp_map_input_as_strings.keys())]
         return _output
 
-    def _process_json_clipboard(self, sort_output=None, format_output=False, fix_output=False, compact_spacing=False, format_auto=False, return_obj=False):
+    def _process_json_clipboard(self, sort_output=None, format_output=False, fix_output=False, compact_spacing=False,
+                                format_auto=False, return_obj=False):
         """
         One method to standardize reading JSON from the clipboard, processing as needed, and updating the clipboard
 
@@ -2072,7 +2123,7 @@ check_recent_user_activity
         self._process_json_clipboard(compact_spacing=True)
 
     def action_json_sort_by_values(self, reverse=False):
-        sort_type= "values_reversed" if reverse else "values"
+        sort_type = "values_reversed" if reverse else "values"
         self._process_json_clipboard(sort_output=sort_type, format_output=True)
 
     def action_json_sort_by_values_reversed(self):
@@ -2199,7 +2250,8 @@ check_recent_user_activity
 
         :return:
         """
-        self.write_clipboard(r"""if [[ -f ~/.vimrc ]]; then sed -E -i".$(date +'%Y%m%d_%H%M%S').bak" '/^set mouse/d' ~/.vimrc; else touch ~/.vimrc; fi ; echo 'set mouse-=a' >> ~/.vimrc""")
+        self.write_clipboard(
+            r"""if [[ -f ~/.vimrc ]]; then sed -E -i".$(date +'%Y%m%d_%H%M%S').bak" '/^set mouse/d' ~/.vimrc; else touch ~/.vimrc; fi ; echo 'set mouse-=a' >> ~/.vimrc""")
 
     def shell_vim_visual_mode_enable_permanently(self):
         """
@@ -2207,7 +2259,8 @@ check_recent_user_activity
 
         :return:
         """
-        self.write_clipboard(r"""if [[ -f ~/.vimrc ]]; then sed -E -i".$(date +'%Y%m%d_%H%M%S').bak" '/^set mouse/d' ~/.vimrc; else touch ~/.vimrc; fi ; echo 'set mouse=a' >> ~/.vimrc""")
+        self.write_clipboard(
+            r"""if [[ -f ~/.vimrc ]]; then sed -E -i".$(date +'%Y%m%d_%H%M%S').bak" '/^set mouse/d' ~/.vimrc; else touch ~/.vimrc; fi ; echo 'set mouse=a' >> ~/.vimrc""")
 
     # Visual Mode, Temporary (within an active session)
     def shell_vim_visual_mode_disable_within_session(self):
@@ -2233,7 +2286,8 @@ check_recent_user_activity
 
         :return:
         """
-        self.write_clipboard(r"""if [[ -f ~/.vimrc ]]; then sed -E -i".$(date +'%Y%m%d_%H%M%S').bak" '/^set nonumber/d' ~/.vimrc; else touch ~/.vimrc; fi ; echo 'set number' >> ~/.vimrc""")
+        self.write_clipboard(
+            r"""if [[ -f ~/.vimrc ]]; then sed -E -i".$(date +'%Y%m%d_%H%M%S').bak" '/^set nonumber/d' ~/.vimrc; else touch ~/.vimrc; fi ; echo 'set number' >> ~/.vimrc""")
 
     def shell_vim_line_numbers_disable_permanently(self):
         """
@@ -2241,7 +2295,8 @@ check_recent_user_activity
 
         :return:
         """
-        self.write_clipboard(r"""if [[ -f ~/.vimrc ]]; then sed -E -i".$(date +'%Y%m%d_%H%M%S').bak" '/^set number/d' ~/.vimrc; else touch ~/.vimrc; fi ; echo 'set nonumber' >> ~/.vimrc""")
+        self.write_clipboard(
+            r"""if [[ -f ~/.vimrc ]]; then sed -E -i".$(date +'%Y%m%d_%H%M%S').bak" '/^set number/d' ~/.vimrc; else touch ~/.vimrc; fi ; echo 'set nonumber' >> ~/.vimrc""")
 
     # Show Line Numbers, Temporary (within an active session)
     def shell_vim_line_numbers_enable_within_session(self):
@@ -2266,7 +2321,8 @@ check_recent_user_activity
 
         :return:
         """
-        self.write_clipboard(r"""if [[ -f ~/.vimrc ]]; then sed -E -i".$(date +'%Y%m%d_%H%M%S').bak" '/^ *set *((no)?number|mouse)/d' ~/.vimrc; fi; printf "set mouse-=a\nset number\n" >> ~/.vimrc""")
+        self.write_clipboard(
+            r"""if [[ -f ~/.vimrc ]]; then sed -E -i".$(date +'%Y%m%d_%H%M%S').bak" '/^ *set *((no)?number|mouse)/d' ~/.vimrc; fi; printf "set mouse-=a\nset number\n" >> ~/.vimrc""")
 
     ############################################################################
     # TECH -> Text Editing
