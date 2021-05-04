@@ -948,6 +948,13 @@ class Actions:
             clip = clip.lower()
         return clip
 
+    def read_clipboard_for_table_name(self, trim_input=True, lower=False):
+        _input = self.read_clipboard()
+        if re.search(r'>*?\s', _input):
+            self.display_notification_error("Invalid input; table name cannot contain spaces")
+            exit(1)
+        return _input
+
     def write_clipboard(self, text, skip_notification=False):
         clipboard.copy(text)
         if self.config.main.clipboard_update_notifications and not skip_notification:
