@@ -516,6 +516,9 @@ class Actions:
         self.add_menu_section(
             "LogicHub | image={} size=20 color=blue".format(self.image_to_base64_string("LH_menu_logichub.ico")))
         self.print_in_menu("LQL & Web UI")
+
+        # ------------ Menu Sub-section: LQL operators ------------ #
+
         self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql, keyboard_shortcut="CmdOrCtrl+shift+p")
         self.make_action("(Beta) Pretty Print SQL options", action=None, alternate=True)
         self.make_action("Wrapped at 80 characters", self.logichub_pretty_print_sql_wrapped, menu_depth=2)
@@ -556,11 +559,6 @@ class Actions:
         self.make_action("Event File URL from File Name", self.logichub_event_file_url_from_file_name)
         self.make_action("Event File URL path (static)", self.logichub_event_file_url_static, alternate=True)
 
-        self.make_action("Operators from Table Name", None)
-        self.make_action("Operator Start: autoJoinTables", self.logichub_operator_start_autoJoinTables, menu_depth=2)
-        self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail, menu_depth=2)
-        self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns, menu_depth=2)
-
         self.add_menu_divider_line(menu_depth=1)
         self.make_action("Spark Commands (from clipboard)", None, text_color="blue")
 
@@ -582,6 +580,33 @@ class Actions:
         self.make_action("DSL Commands", None, text_color="blue")
 
         self.make_action("Integration Error Check AND forceFail (from table name)", self.logichub_dsl_integ_error_check_and_force_fail)
+
+        # ------------ Menu Sub-section: LQL operators ------------ #
+
+        self.print_in_menu("LQL: Operators")
+
+        self.add_menu_divider_line(menu_depth=1)
+        self.make_action("General", None, text_color="blue")
+
+        self.make_action("Operator Start: addExecutionMetadata", self.logichub_operator_start_addExecutionMetadata)
+        self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail)
+        self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns, menu_depth=1)
+
+        self.add_menu_divider_line(menu_depth=1)
+        self.make_action("Joins", None, text_color="blue")
+
+        self.make_action("Operator Start: autoJoinTables", self.logichub_operator_start_autoJoinTables, menu_depth=1)
+        self.make_action("Operator Start: joinTables", self.logichub_operator_start_joinTables, menu_depth=1)
+
+        self.add_menu_divider_line(menu_depth=1)
+        self.make_action("Custom Lists", None, text_color="blue")
+
+        self.make_action("Operator Start: appendToList", self.logichub_operator_start_appendToList)
+        self.make_action("Operator Start: loadList (with filter)", self.logichub_operator_start_loadList_with_filter)
+        self.make_action("Operator Start: loadList (no filter)", self.logichub_operator_start_loadList_without_filter)
+        self.make_action("Operator Start: queryFromList", self.logichub_operator_start_queryFromList)
+        self.make_action("Operator Start: replaceList", self.logichub_operator_start_replaceList)
+        self.make_action("Operator Start: selectivelyDeleteFromList", self.logichub_operator_start_selectivelyDeleteFromList)
 
         self.print_in_menu("LogicHub Troubleshooting")
         self.make_action("Sanitize playbook JSON for comparison (from clipboard)", self.sanitize_logichub_json)
@@ -1133,18 +1158,14 @@ class Actions:
         return sql_string
 
     def logichub_sql_start_with_integ_error_check(self):
-        _input = self.read_clipboard()
-        if ' ' in _input:
-            self.display_notification_error("Invalid input; table name cannot contain spaces")
+        _input = self.read_clipboard_for_table_name()
         self.write_clipboard(self._logichub_integ_error_sql(_input))
 
     def logichub_sql_start_with_integ_error_check_without_table_name(self):
         self.write_clipboard(self._logichub_integ_error_sql())
 
     def logichub_dsl_integ_error_check_and_force_fail(self):
-        _input = self.read_clipboard()
-        if ' ' in _input:
-            self.display_notification_error("Invalid input; table name cannot contain spaces")
+        _input = self.read_clipboard_for_table_name()
         first_table = self._logichub_integ_error_sql(_input)
         self.write_clipboard(
             f"[{first_table}] as error_check\n| [forceFail(error_check, \"integ_error\")] as fail_if_error\n| [dropColumns(fail_if_error, \"integ_error\", \"exit_code\", \"stdout\", \"stderr\")] as final_output")
@@ -1184,24 +1205,6 @@ class Actions:
         _columns = _input.split()
         _columns_formatted = "R.{}".format(", R.".join(_columns))
         self.write_clipboard(f'SELECT {_columns_formatted}\nFROM xxxx L\nLEFT JOIN xxxx R\nON L.xxxx = R.xxxx')
-
-    def logichub_operator_start_autoJoinTables(self):
-        _input = self.read_clipboard()
-        if ' ' in _input:
-            self.display_notification_error("Invalid input; table name cannot contain spaces")
-        self.write_clipboard(f'autoJoinTables([{_input}, xxxx])')
-
-    def logichub_operator_start_forceFail(self):
-        _input = self.read_clipboard()
-        if ' ' in _input:
-            self.display_notification_error("Invalid input; table name cannot contain spaces")
-        self.write_clipboard(f'forceFail({_input}, "integ_error")')
-
-    def logichub_operator_start_jsonToColumns(self):
-        _input = self.read_clipboard()
-        if ' ' in _input:
-            self.display_notification_error("Invalid input; table name cannot contain spaces")
-        self.write_clipboard(f'jsonToColumns({_input}, "result")')
 
     def logichub_event_file_url_from_file_name(self):
         _input = self.read_clipboard()
@@ -1452,6 +1455,62 @@ class Actions:
         _input = crawl(_input)
 
         self.write_clipboard(json.dumps(_input, indent=2))
+
+    # ---- Operators: General ----
+
+    def logichub_operator_start_addExecutionMetadata(self):
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'addExecutionMetadata({table_name})')
+
+    def logichub_operator_start_forceFail(self):
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'forceFail({table_name}, "integ_error")')
+
+    def logichub_operator_start_jsonToColumns(self):
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'jsonToColumns({table_name}, "result")')
+
+    # ---- Operators: Joins ----
+
+    def logichub_operator_start_autoJoinTables(self):
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'autoJoinTables([{table_name}, TABLE2])')
+
+    def logichub_operator_start_joinTables(self):
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'joinTables([{table_name}, TABLE2], [], "false")')
+
+    # ---- Operators: Custom Lists ----
+
+    def logichub_operator_start_appendToList(self):
+        """Operator Start: appendToList"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'appendToList({table_name}, "LIST_NAME")')
+
+    def logichub_operator_start_loadList_with_filter(self):
+        """Operator Start: loadList"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'loadList({table_name}, "FILTER")')
+
+    def logichub_operator_start_loadList_without_filter(self):
+        """Operator Start: loadList"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'loadList({table_name})')
+
+    def logichub_operator_start_queryFromList(self):
+        """Operator Start: queryFromList"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'queryFromList("LIST_NAME", "FILTER", {table_name})')
+
+    def logichub_operator_start_replaceList(self):
+        """Operator Start: replaceList"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'replaceList({table_name}, "LIST_NAME")')
+
+    def logichub_operator_start_selectivelyDeleteFromList(self):
+        """Operator Start: selectivelyDeleteFromList"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'selectivelyDeleteFromList("LIST_NAME", "FILTER", {table_name})')
 
     def _logichub_runtime_stats_sort_by_longest(self):
         _input = self._json_notify_and_exit_when_invalid()
