@@ -553,11 +553,13 @@ class Actions:
                          self.logichub_sql_start_from_tabs_join_right)
         self.make_action("SQL Start from spaced strings (join, right columns only)",
                          self.logichub_tabs_to_columns_right_join, alternate=True)
-        self.make_action("Operator Start: autoJoinTables", self.logichub_operator_start_autoJoinTables)
-        self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail)
-        self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns)
         self.make_action("Event File URL from File Name", self.logichub_event_file_url_from_file_name)
         self.make_action("Event File URL path (static)", self.logichub_event_file_url_static, alternate=True)
+
+        self.make_action("Operators from Table Name", None)
+        self.make_action("Operator Start: autoJoinTables", self.logichub_operator_start_autoJoinTables, menu_depth=2)
+        self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail, menu_depth=2)
+        self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns, menu_depth=2)
 
         self.add_menu_divider_line(menu_depth=1)
         self.make_action("Spark Commands (from clipboard)", None, text_color="blue")
