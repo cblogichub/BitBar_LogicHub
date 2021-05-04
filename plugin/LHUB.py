@@ -255,7 +255,7 @@ class Reusable:
                     rtn_dct[k] = v
                 elif v is None:
                     pass
-                elif k in rtn_dct and type(v) != type(rtn_dct[k]):
+                elif k in rtn_dct and not isinstance(v, type(rtn_dct[k])):
                     raise TypeError(
                         f"Overlapping keys exist with different types: original is {type(rtn_dct[k]).__name__}, new value is {type(v).__name__}")
                 elif isinstance(rtn_dct[k], dict) and isinstance(merge_dct[k], collections.abc.Mapping):
