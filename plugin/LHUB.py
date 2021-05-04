@@ -842,6 +842,9 @@ class Actions:
         _output = os.popen(f'osascript -e "display notification \\"{content}\\" with title \\"{title}\\""')
 
     def display_notification_error(self, content, title=None, print_stderr=False, error_prefix="Failed with error: "):
+        if '"' in content:
+            # self.display_notification_error("Error returned, but the error message contained a quotation mark, which is not allowed by xbar")
+            content = content.replace('"', "'")
         error_prefix = error_prefix if error_prefix and isinstance(error_prefix, str) else ""
         _output = os.popen('osascript -e "beep"')
         _error = f"{error_prefix}{content}"
