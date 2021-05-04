@@ -764,7 +764,8 @@ class Actions:
         self.make_action("Text to Lowercase", self.text_make_lowercase)
         self.make_action("Trim Text in Clipboard", self.text_trim_string)
         self.make_action("Remove Text Formatting", self.text_remove_formatting)
-        self.make_action("Decode URL Encoding (from clipboard)", self.decode_url_encoding)
+        self.make_action("URL Encoding: Encode (from clipboard)", self.encode_url_encoding, action_id="encode_url_encoding")
+        self.make_action("URL Encoding: Decode (from clipboard)", self.decode_url_encoding, action_id="decode_url_encoding")
 
         self.add_menu_divider_line(menu_depth=1)
         self.make_action("Time", None, text_color="blue")
@@ -2408,6 +2409,14 @@ check_recent_user_activity
         :return:
         """
         self.write_clipboard(self.read_clipboard(trim_input=False))
+
+    def encode_url_encoding(self):
+        """ Decode URL Encoding (from clipboard) """
+        _input = self.read_clipboard()
+        try:
+            self.write_clipboard(urllib.parse.quote(_input))
+        except:
+            self.display_notification_error("URL encoding failed")
 
     def decode_url_encoding(self):
         """ Decode URL Encoding (from clipboard) """
