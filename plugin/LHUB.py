@@ -515,9 +515,16 @@ class Actions:
 
         self.add_menu_section(
             "LogicHub | image={} size=20 color=blue".format(self.image_to_base64_string("LH_menu_logichub.ico")))
-        self.print_in_menu("LQL & Web UI")
+        self.print_in_menu("LQL: SQL & Web UI")
 
-        # ------------ Menu Sub-section: LQL operators ------------ #
+        # ------------ Menu Sub-section: LQL: SQL and Web UI ------------ #
+
+        self.add_menu_section("Web UI", text_color="blue", menu_depth=1)
+
+        self.make_action("Event File URL from File Name", self.logichub_event_file_url_from_file_name)
+        self.make_action("Event File URL path (static)", self.logichub_event_file_url_static, alternate=True)
+
+        self.add_menu_section("SQL", text_color="blue", menu_depth=1)
 
         self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql, keyboard_shortcut="CmdOrCtrl+shift+p")
         self.make_action("(Beta) Pretty Print SQL options", action=None, alternate=True)
@@ -556,11 +563,8 @@ class Actions:
                          self.logichub_sql_start_from_tabs_join_right)
         self.make_action("SQL Start from spaced strings (join, right columns only)",
                          self.logichub_tabs_to_columns_right_join, alternate=True)
-        self.make_action("Event File URL from File Name", self.logichub_event_file_url_from_file_name)
-        self.make_action("Event File URL path (static)", self.logichub_event_file_url_static, alternate=True)
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("Spark Commands (from clipboard)", None, text_color="blue")
+        self.add_menu_section("Spark Commands (from clipboard)", text_color="blue", menu_depth=1)
 
         # Full version of "from_json" action, which includes all nested dicts and lists
         self.make_action("from_json: full", self.action_spark_from_json)
@@ -576,8 +580,7 @@ class Actions:
 
         self.make_action("schema_of_json: Create column from JSON clipboard", self.action_json_to_schema_of_json)
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("DSL Commands", None, text_color="blue")
+        self.add_menu_section("DSL Commands", text_color="blue", menu_depth=1)
 
         self.make_action("Integration Error Check AND forceFail (from table name)", self.logichub_dsl_integ_error_check_and_force_fail)
 
@@ -585,21 +588,18 @@ class Actions:
 
         self.print_in_menu("LQL: Operators")
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("General", None, text_color="blue")
+        self.add_menu_section("General", text_color="blue", menu_depth=1)
 
         self.make_action("Operator Start: addExecutionMetadata", self.logichub_operator_start_addExecutionMetadata)
         self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail)
         self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns, menu_depth=1)
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("Joins", None, text_color="blue")
+        self.add_menu_section("Joins", text_color="blue", menu_depth=1)
 
         self.make_action("Operator Start: autoJoinTables", self.logichub_operator_start_autoJoinTables, menu_depth=1)
         self.make_action("Operator Start: joinTables", self.logichub_operator_start_joinTables, menu_depth=1)
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("Custom Lists", None, text_color="blue")
+        self.add_menu_section("Custom Lists", text_color="blue", menu_depth=1)
 
         self.make_action("Operator Start: appendToList", self.logichub_operator_start_appendToList)
         self.make_action("Operator Start: loadList (with filter)", self.logichub_operator_start_loadList_with_filter)
@@ -611,8 +611,7 @@ class Actions:
         self.print_in_menu("LogicHub Troubleshooting")
         self.make_action("Sanitize playbook JSON for comparison (from clipboard)", self.sanitize_logichub_json)
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("runtimeStats (from batch stats json in clipboard)", None, text_color="blue")
+        self.add_menu_section("runtimeStats (from batch stats json in clipboard)", text_color="blue", menu_depth=1)
 
         self.make_action("Runtime Stats Sort JSON", self.logichub_runtime_stats_to_json)
         self.make_action("Runtime Stats to CSV", self.logichub_runtime_stats_to_csv)
@@ -646,7 +645,7 @@ class Actions:
 
         self.print_in_menu("DB: Postgres")
 
-        self.make_action("Integrations", None, text_color="blue")
+        self.add_menu_section("Integrations", text_color="blue", menu_depth=1)
 
         self.make_action("List Descriptors w/ Docker Images", self.db_postgres_descriptors_and_docker_images)
 
@@ -659,19 +658,16 @@ class Actions:
         self.make_action("List Instances w/ Docker Images (extended), exclude image in clipboard",
                          self.db_postgres_instances_and_docker_images_extended_exclude_image, alternate=True)
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("Streams and Batches", None, text_color="blue")
+        self.add_menu_section("Streams and Batches", text_color="blue", menu_depth=1)
 
         self.make_action("List executing streams/batches", self.db_postgres_currently_running_streams)
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("Flows", None, text_color="blue")
+        self.add_menu_section("Flows", text_color="blue", menu_depth=1)
 
         self.make_action("Summarize Flows (latest versions)", self.db_postgres_summarize_latest_flows)
         self.make_action("Summarize Flows (Lite)", self.db_postgres_summarize_latest_flows_lite, alternate=True)
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("Users", None, text_color="blue")
+        self.add_menu_section("Users", text_color="blue", menu_depth=1)
 
         self.make_action("List users with pending password reset", self.db_postgres_users_pending_password_reset)
 
@@ -698,12 +694,15 @@ class Actions:
                          self.open_integration_container_by_product_name)
 
         self.print_in_menu("LogicHub Upgrades")
-        self.make_action("Upgrade Prep: Visual inspection", self.logichub_upgrade_prep_verifications)
-        self.make_action("Upgrade Prep: Backups (run as logichub/centos!)", self.logichub_upgrade_prep_backups)
-        self.make_action("Upgrade Prep: Backups Lite (skip logs and LH backup script)",
+
+        self.add_menu_section("Upgrade Preparation", text_color="blue", menu_depth=1)
+
+        self.make_action("Visual inspection", self.logichub_upgrade_prep_verifications)
+        self.make_action("Backups (run as logichub/centos!)", self.logichub_upgrade_prep_backups)
+        self.make_action("Backups Lite (skip logs and LH backup script)",
                          self.logichub_upgrade_prep_backups_lite, alternate=True)
 
-        self.add_menu_divider_line(menu_depth=1)
+        self.add_menu_section("Upgrade Commands", text_color="blue", menu_depth=1)
 
         self.make_action("Upgrade Command (from milestone version in clipboard)",
                          self.logichub_upgrade_command_from_clipboard)
@@ -718,23 +717,23 @@ class Actions:
         self.add_menu_section(":wrench: TECH | size=20 color=blue")
 
         self.print_in_menu("JSON")
-        self.make_action("JSON Validate", self.action_json_validate)
+        self.make_action("Validate", self.action_json_validate)
 
-        self.make_action("JSON Format", self.action_json_format)
-        self.make_action("JSON Format (sorted)", self.action_json_format_sorted, alternate=True)
+        self.make_action("Format", self.action_json_format)
+        self.make_action("Format (sorted)", self.action_json_format_sorted, alternate=True)
 
-        self.make_action("JSON Compact", self.action_json_compact)
-        self.make_action("JSON Compact (sorted)", self.action_json_compact_sorted, alternate=True)
+        self.make_action("Compact", self.action_json_compact)
+        self.make_action("Compact (sorted)", self.action_json_compact_sorted, alternate=True)
 
-        self.make_action("JSON Semi-Compact", self.action_json_semi_compact)
-        self.make_action("JSON Semi-Compact (sorted)", self.action_json_semi_compact_sorted, alternate=True)
+        self.make_action("Semi-Compact", self.action_json_semi_compact)
+        self.make_action("Semi-Compact (sorted)", self.action_json_semi_compact_sorted, alternate=True)
 
-        self.make_action("JSON Sort by Values", self.action_json_sort_by_values)
-        self.make_action("JSON Sort by Values (Reversed)", self.action_json_sort_by_values_reversed, alternate=True)
+        self.make_action("Sort by Values", self.action_json_sort_by_values)
+        self.make_action("Sort by Values (Reversed)", self.action_json_sort_by_values_reversed, alternate=True)
 
         self.add_menu_divider_line(menu_depth=1)
 
-        self.make_action("Fix JSON (escaped strings to dicts/lists)", self.action_json_fix)
+        self.make_action("Fix (escaped strings to dicts/lists)", self.action_json_fix)
         self.make_action("Sort by keys and values (recursive)", self.action_json_sort)
 
         self.print_in_menu("HTML")
@@ -784,8 +783,7 @@ class Actions:
 
         self.print_in_menu("Data & Text Editing")
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("Text", None, text_color="blue")
+        self.add_menu_section("Text", text_color="blue", menu_depth=1)
 
         self.make_action("Text to Uppercase", self.text_make_uppercase)
         self.make_action("Text to Lowercase", self.text_make_lowercase)
@@ -794,8 +792,8 @@ class Actions:
         self.make_action("URL Encoding: Encode (from clipboard)", self.encode_url_encoding, action_id="encode_url_encoding")
         self.make_action("URL Encoding: Decode (from clipboard)", self.decode_url_encoding, action_id="decode_url_encoding")
 
-        self.add_menu_divider_line(menu_depth=1)
-        self.make_action("Time", None, text_color="blue")
+        self.add_menu_section("Time", text_color="blue", menu_depth=1)
+
         self.make_action("Show epoch time as local time (from clipboard)", self.action_epoch_time_to_str, action_id="epoch_time_as_local_time")
 
         # ------------ Menu Section: Networking ------------ #
@@ -835,7 +833,7 @@ class Actions:
             except:
                 pass
 
-    def add_menu_section(self, label, menu_depth=0):
+    def add_menu_section(self, label, menu_depth=0, text_color=None):
         """
         Print a divider line as needed by the plugin menu, then print a label for the new section
         :param label:
@@ -843,6 +841,8 @@ class Actions:
         :return:
         """
         assert label, "New menu section requested without providing a label"
+        if text_color and ' color=' not in label:
+            label += f"| color={text_color}"
         self.add_menu_divider_line(menu_depth=menu_depth)
         self.print_in_menu("--" * menu_depth + label)
 
@@ -935,9 +935,9 @@ class Actions:
     def make_action(
             self, name, action, action_id=None, menu_depth=1, alternate=False,
             terminal=False, text_color=None, keyboard_shortcut=""):
-        menu_name = name
+        menu_line = name
         if menu_depth:
-            menu_name = '--' * menu_depth + ' ' + menu_name
+            menu_line = '--' * menu_depth + ' ' + menu_line
         action_string = ''
         if alternate:
             action_string = action_string + ' alternate=true'
@@ -946,11 +946,11 @@ class Actions:
                 raise ValueError(f'Keyboard shortcut "{keyboard_shortcut}" already assigned to action "{self.__reserved_keyboard_shortcuts[keyboard_shortcut]}" and cannot be mapped to action {name}')
             self.__reserved_keyboard_shortcuts[keyboard_shortcut] = name
             action_string += ' | key=' + keyboard_shortcut
+        menu_line += f' | {action_string}'
         if not action:
             if text_color:
-                self.print_in_menu(f'{menu_name} | {action_string} color={text_color}')
-            else:
-                self.print_in_menu(f'{menu_name} | {action_string}')
+                menu_line += f' color={text_color}'
+            self.print_in_menu(menu_line)
             return
 
         if not action_id:
@@ -960,8 +960,8 @@ class Actions:
         _var = action_tuple(action_id, name, action)
         self.action_list[action_id] = _var
         terminal = str(terminal).lower()
-        self.print_in_menu(
-            f'{menu_name} | {action_string} | bash="{self.script_name}" | param1="{action_id}" | terminal={terminal}')
+        menu_line += f' | bash="{self.script_name}" | param1="{action_id}" | terminal={terminal}'
+        self.print_in_menu(menu_line)
         return _var
 
     @staticmethod
