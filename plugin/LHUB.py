@@ -292,6 +292,16 @@ class Reusable:
         # return sorted(_input.items(), key=lambda x: x[1], reverse=reverse)
         return {k: v for k, v in sorted(_input.items(), key=lambda x: x[1], reverse=reverse)}
 
+    @staticmethod
+    def time_epoch_to_str(time_number, utc=False, time_format=None):
+        _time = float(time_number)
+        # If the number is in milliseconds, convert to seconds
+        if len(str(int(_time))) > 10:
+            _time = _time / 1000
+        time_format = time_format if time_format else '%Y-%m-%d %I:%M:%S %p %Z'
+        time_func = datetime.utcfromtimestamp if utc is True else datetime.fromtimestamp
+        return time_func(_time).strftime(time_format)
+
 
 # ToDo REVISIT
 
@@ -745,12 +755,20 @@ class Actions:
         # Disable visual mode AND enable line numbers all at once
         self.make_action("vim: Set both permanently", self.shell_vim_set_both_permanently)
 
-        self.print_in_menu("Text Editing")
+        self.print_in_menu("Data & Text Editing")
+
+        self.add_menu_divider_line(menu_depth=1)
+        self.make_action("Text", None, text_color="blue")
+
         self.make_action("Text to Uppercase", self.text_make_uppercase)
         self.make_action("Text to Lowercase", self.text_make_lowercase)
         self.make_action("Trim Text in Clipboard", self.text_trim_string)
         self.make_action("Remove Text Formatting", self.text_remove_formatting)
         self.make_action("Decode URL Encoding (from clipboard)", self.decode_url_encoding)
+
+        self.add_menu_divider_line(menu_depth=1)
+        self.make_action("Time", None, text_color="blue")
+        self.make_action("Show epoch time as local time (from clipboard)", self.action_epoch_time_to_str, action_id="epoch_time_as_local_time")
 
         # ------------ Menu Section: Networking ------------ #
 
