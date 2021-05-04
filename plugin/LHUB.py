@@ -2414,6 +2414,17 @@ check_recent_user_activity
         except:
             self.display_notification_error("Failed to decode URL string")
 
+    def action_epoch_time_to_str(self):
+        """Show epoch time as local time"""
+        _input = self.read_clipboard()
+        try:
+            _ = float(_input)
+        except ValueError:
+            self.display_notification_error(f'"{_input}" is not a valid number')
+            return
+        _output = Reusable.time_epoch_to_str(_input)
+        self.display_notification(f'{_input} = {_output}')
+
     def execute_plugin(self, action):
         log.debug(f"Executing action: {action}")
         if not action:
