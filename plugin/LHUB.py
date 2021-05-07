@@ -1479,7 +1479,7 @@ class Actions:
 
     def logichub_operator_start_joinTables(self):
         table_name = self.read_clipboard_for_table_name()
-        self.write_clipboard(f'joinTables([{table_name}, TABLE2], [], "false")')
+        self.write_clipboard(f'joinTables([{table_name}, TABLE2], [], "JOIN_TYPE")')
 
     # ---- Operators: Custom Lists ----
 
@@ -1488,15 +1488,18 @@ class Actions:
         table_name = self.read_clipboard_for_table_name()
         self.write_clipboard(f'appendToList({table_name}, "LIST_NAME")')
 
+    def logichub_operator_start_loadList_without_filter(self, return_data=False):
+        """Operator Start: loadList"""
+        list_name = self.read_clipboard()
+        output = f'loadList("{list_name}"'
+        if return_data:
+            return output
+        self.write_clipboard(output + ')')
+
     def logichub_operator_start_loadList_with_filter(self):
         """Operator Start: loadList"""
-        table_name = self.read_clipboard_for_table_name()
-        self.write_clipboard(f'loadList({table_name}, "FILTER")')
-
-    def logichub_operator_start_loadList_without_filter(self):
-        """Operator Start: loadList"""
-        table_name = self.read_clipboard_for_table_name()
-        self.write_clipboard(f'loadList({table_name})')
+        output = self.logichub_operator_start_loadList_without_filter(return_data=True)
+        self.write_clipboard(output + ', "FILTER")')
 
     def logichub_operator_start_queryFromList(self):
         """Operator Start: queryFromList"""
