@@ -791,6 +791,7 @@ class Actions:
         self.make_action("Remove Text Formatting", self.text_remove_formatting)
         self.make_action("URL Encoding: Encode (from clipboard)", self.encode_url_encoding, action_id="encode_url_encoding")
         self.make_action("URL Encoding: Decode (from clipboard)", self.decode_url_encoding, action_id="decode_url_encoding")
+        self.make_action("Strip non-ascii characters", self.remove_non_ascii_characters, keyboard_shortcut="CmdOrCtrl+OptionOrAlt+s")
 
         self.add_menu_section("Time", text_color="blue", menu_depth=1)
 
@@ -2493,6 +2494,13 @@ check_recent_user_activity
             self.write_clipboard(urllib.parse.unquote(_input))
         except:
             self.display_notification_error("Failed to decode URL string")
+
+    def remove_non_ascii_characters(self):
+        """Strip non-ascii characters"""
+        _input = self.read_clipboard()
+        string_encode = _input.encode("ascii", "ignore")
+        string_decode = string_encode.decode()
+        self.write_clipboard(string_decode)
 
     def action_epoch_time_to_str(self):
         """Show epoch time as local time"""
