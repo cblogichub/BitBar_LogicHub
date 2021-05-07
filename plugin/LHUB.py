@@ -785,8 +785,8 @@ class Actions:
 
         self.add_menu_section("Text", text_color="blue", menu_depth=1)
 
-        self.make_action("Text to Uppercase", self.text_make_uppercase)
-        self.make_action("Text to Lowercase", self.text_make_lowercase)
+        self.make_action("Text to Uppercase", self.text_make_uppercase, keyboard_shortcut="CmdOrCtrl+OptionOrAlt+u")
+        self.make_action("Text to Lowercase", self.text_make_lowercase, keyboard_shortcut="CmdOrCtrl+OptionOrAlt+l")
         self.make_action("Trim Text in Clipboard", self.text_trim_string)
         self.make_action("Remove Text Formatting", self.text_remove_formatting)
         self.make_action("URL Encoding: Encode (from clipboard)", self.encode_url_encoding, action_id="encode_url_encoding")
