@@ -592,6 +592,8 @@ class Actions:
 
         self.make_action("Operator Start: addExecutionMetadata", self.logichub_operator_start_addExecutionMetadata)
         self.make_action("Operator Start: dropColumns", self.logichub_operator_start_dropColumns)
+        self.make_action("Operator Start: fetchAlerts (with parent table)", self.logichub_operator_start_fetchAlerts_with_table)
+        self.make_action("Operator Start: fetchAlerts (without parent table)", self.logichub_operator_start_fetchAlerts_no_table)
         self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail)
         self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns, menu_depth=1)
 
@@ -1468,6 +1470,15 @@ class Actions:
         """Operator Start: dropColumns"""
         table_name = self.read_clipboard_for_table_name()
         self.write_clipboard(f'dropColumns({table_name}, "COLUMN_NAME")')
+
+    def logichub_operator_start_fetchAlerts_with_table(self, include_table_name=True):
+        table_reference = ''
+        if include_table_name:
+            table_reference = f', {self.read_clipboard_for_table_name()}'
+        self.write_clipboard(f'fetchAlerts("QUERY", 100000{table_reference})')
+
+    def logichub_operator_start_fetchAlerts_no_table(self):
+        self.logichub_operator_start_fetchAlerts_with_table(include_table_name=False)
 
     def logichub_operator_start_forceFail(self):
         table_name = self.read_clipboard_for_table_name()
