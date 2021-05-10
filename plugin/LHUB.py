@@ -591,6 +591,7 @@ class Actions:
         self.add_menu_section("General", text_color="blue", menu_depth=1)
 
         self.make_action("Operator Start: addExecutionMetadata", self.logichub_operator_start_addExecutionMetadata)
+        self.make_action("Operator Start: dropColumns", self.logichub_operator_start_dropColumns)
         self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail)
         self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns, menu_depth=1)
 
@@ -1462,6 +1463,11 @@ class Actions:
     def logichub_operator_start_addExecutionMetadata(self):
         table_name = self.read_clipboard_for_table_name()
         self.write_clipboard(f'addExecutionMetadata({table_name})')
+
+    def logichub_operator_start_dropColumns(self):
+        """Operator Start: dropColumns"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'dropColumns({table_name}, "COLUMN_NAME")')
 
     def logichub_operator_start_forceFail(self):
         table_name = self.read_clipboard_for_table_name()
