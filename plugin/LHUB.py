@@ -592,6 +592,7 @@ class Actions:
 
         self.make_action("Operator Start: addExecutionMetadata", self.logichub_operator_start_addExecutionMetadata)
         self.make_action("Operator Start: dropColumns", self.logichub_operator_start_dropColumns)
+        self.make_action("Operator Start: ensureTableHasColumns", self.logichub_operator_start_ensureTableHasColumns)
         self.make_action("Operator Start: fetchAlerts (with parent table)", self.logichub_operator_start_fetchAlerts_with_table)
         self.make_action("Operator Start: fetchAlerts (without parent table)", self.logichub_operator_start_fetchAlerts_no_table)
         self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail)
@@ -1470,6 +1471,11 @@ class Actions:
         """Operator Start: dropColumns"""
         table_name = self.read_clipboard_for_table_name()
         self.write_clipboard(f'dropColumns({table_name}, "COLUMN_NAME")')
+
+    def logichub_operator_start_ensureTableHasColumns(self):
+        """Operator Start: ensureTableHasColumns"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'ensureTableHasColumns({table_name}, "COLUMN_NAME")')
 
     def logichub_operator_start_fetchAlerts_with_table(self, include_table_name=True):
         table_reference = ''
