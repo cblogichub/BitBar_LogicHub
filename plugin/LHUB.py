@@ -723,7 +723,7 @@ class Actions:
         self.print_in_menu("JSON")
         self.make_action("Validate", self.action_json_validate)
 
-        self.make_action("Format", self.action_json_format)
+        self.make_action("Format", self.action_json_format, keyboard_shortcut="CmdOrCtrl+shift+f")
         self.make_action("Format (sorted)", self.action_json_format_sorted, alternate=True)
 
         self.make_action("Compact", self.action_json_compact)
