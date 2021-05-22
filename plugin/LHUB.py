@@ -2545,7 +2545,7 @@ check_recent_user_activity
         string_decode = string_encode.decode()
         self.write_clipboard(string_decode)
 
-    def action_epoch_time_to_str(self):
+    def action_epoch_time_to_str(self, update_clipboard=False):
         """Show epoch time as local time"""
         _input = self.read_clipboard()
         try:
@@ -2553,8 +2553,13 @@ check_recent_user_activity
         except ValueError:
             self.display_notification_error(f'"{_input}" is not a valid number')
             return
-        _output = Reusable.time_epoch_to_str(_input)
+        _output = Reusable.time_epoch_to_str(_input).strip()
         self.display_notification(f'{_input} = {_output}')
+        if update_clipboard:
+            self.write_clipboard(_output)
+
+    def epoch_time_as_local_time_convert(self):
+        self.action_epoch_time_to_str(update_clipboard=True)
 
     def execute_plugin(self, action):
         log.debug(f"Executing action: {action}")
