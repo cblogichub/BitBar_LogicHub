@@ -1699,7 +1699,7 @@ check_recent_user_activity
     def action_docker_psql_without_shell_json(self, text=None):
         text = (text if text else "...").replace('"', r'\"')
         self.write_clipboard(
-            f'docker exec -it postgres psql -P format=unaligned --u daemon lh -t -c "select json_agg(a) as results from ({text}) a"')
+            f'docker exec postgres psql -P format=unaligned --u daemon lh -t -c "select json_agg(a) as results from ({text}) a"')
 
     def action_docker_psql_without_shell_json_from_clipboard(self):
         self.action_docker_psql_without_shell_json(text=self.read_clipboard())
