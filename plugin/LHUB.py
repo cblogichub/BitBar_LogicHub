@@ -590,27 +590,29 @@ class Actions:
 
         self.add_menu_section("General", text_color="blue", menu_depth=1)
 
-        self.make_action("Operator Start: addExecutionMetadata", self.logichub_operator_start_addExecutionMetadata)
-        self.make_action("Operator Start: dropColumns", self.logichub_operator_start_dropColumns)
-        self.make_action("Operator Start: ensureTableHasColumns", self.logichub_operator_start_ensureTableHasColumns)
-        self.make_action("Operator Start: fetchAlerts (with parent table)", self.logichub_operator_start_fetchAlerts_with_table)
-        self.make_action("Operator Start: fetchAlerts (without parent table)", self.logichub_operator_start_fetchAlerts_no_table)
-        self.make_action("Operator Start: forceFail", self.logichub_operator_start_forceFail)
-        self.make_action("Operator Start: jsonToColumns", self.logichub_operator_start_jsonToColumns, menu_depth=1)
+        self.make_action("addExecutionMetadata", self.logichub_operator_start_addExecutionMetadata)
+        self.make_action("dropColumns", self.logichub_operator_start_dropColumns)
+        self.make_action("ensureTableHasColumns", self.logichub_operator_start_ensureTableHasColumns)
+        self.make_action("fetchAlerts (with parent table)", self.logichub_operator_start_fetchAlerts_with_table)
+        self.make_action("fetchAlerts (without parent table)", self.logichub_operator_start_fetchAlerts_no_table)
+        self.make_action("forceFail", self.logichub_operator_start_forceFail)
+        self.make_action("jsonToColumns", self.logichub_operator_start_jsonToColumns, menu_depth=1)
+        self.make_action("unionAll", self.logichub_operator_start_unionAll, menu_depth=1)
+        self.make_action("waitForMillis", self.logichub_operator_start_waitForMillis)
 
         self.add_menu_section("Joins", text_color="blue", menu_depth=1)
 
-        self.make_action("Operator Start: autoJoinTables", self.logichub_operator_start_autoJoinTables, menu_depth=1)
-        self.make_action("Operator Start: joinTables", self.logichub_operator_start_joinTables, menu_depth=1)
+        self.make_action("autoJoinTables", self.logichub_operator_start_autoJoinTables, menu_depth=1)
+        self.make_action("joinTables", self.logichub_operator_start_joinTables, menu_depth=1)
 
         self.add_menu_section("Custom Lists", text_color="blue", menu_depth=1)
 
-        self.make_action("Operator Start: appendToList", self.logichub_operator_start_appendToList)
-        self.make_action("Operator Start: loadList (with filter)", self.logichub_operator_start_loadList_with_filter)
-        self.make_action("Operator Start: loadList (no filter)", self.logichub_operator_start_loadList_without_filter)
-        self.make_action("Operator Start: queryFromList", self.logichub_operator_start_queryFromList)
-        self.make_action("Operator Start: replaceList", self.logichub_operator_start_replaceList)
-        self.make_action("Operator Start: selectivelyDeleteFromList", self.logichub_operator_start_selectivelyDeleteFromList)
+        self.make_action("appendToList", self.logichub_operator_start_appendToList)
+        self.make_action("loadList (with filter)", self.logichub_operator_start_loadList_with_filter)
+        self.make_action("loadList (no filter)", self.logichub_operator_start_loadList_without_filter)
+        self.make_action("queryFromList", self.logichub_operator_start_queryFromList)
+        self.make_action("replaceList", self.logichub_operator_start_replaceList)
+        self.make_action("selectivelyDeleteFromList", self.logichub_operator_start_selectivelyDeleteFromList)
 
         self.print_in_menu("LogicHub Troubleshooting")
         self.make_action("Sanitize playbook JSON for comparison (from clipboard)", self.sanitize_logichub_json)
@@ -799,7 +801,8 @@ class Actions:
 
         self.add_menu_section("Time", text_color="blue", menu_depth=1)
 
-        self.make_action("Show epoch time as local time (from clipboard)", self.action_epoch_time_to_str, action_id="epoch_time_as_local_time")
+        self.make_action("Convert epoch time as local time (from clipboard)", self.epoch_time_as_local_time_convert)
+        self.make_action("Show epoch time as local time (leave clipboard)", self.action_epoch_time_to_str, action_id="epoch_time_as_local_time", alternate=True)
 
         # ------------ Menu Section: Networking ------------ #
 
@@ -1493,6 +1496,15 @@ class Actions:
     def logichub_operator_start_jsonToColumns(self):
         table_name = self.read_clipboard_for_table_name()
         self.write_clipboard(f'jsonToColumns({table_name}, "result")')
+
+    def logichub_operator_start_unionAll(self):
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'unionAll({table_name}, TABLE2)')
+
+    def logichub_operator_start_waitForMillis(self):
+        """Operator Start: waitForMillis"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'waitForMillis({table_name}, NUMBER)')
 
     # ---- Operators: Joins ----
 
