@@ -1057,15 +1057,20 @@ class Actions:
 
         # specific keyword replacements for forcing uppercase
         specific_functions_to_uppercase = [
-            "get_json_object", "from_unixtime", r"min(", r"max(", r"sum("
+            "get_json_object", "from_unixtime", "min(", "max(", "sum(", "count("
         ]
         for f in specific_functions_to_uppercase:
             if f in _output:
                 _output = _output.replace(f, f.upper())
 
-        # Workaround for "result" always getting turned into uppercase by sqlparse
-        if re.findall(r"\bRESULT\b", _output) and not re.findall(r"\bRESULT\b", input_str):
-            _output = re.sub(r"\bRESULT\b", "result", _output)
+        # Workaround for "result" and other fields always getting turned into uppercase by sqlparse
+        override_caps = ["result", "temp"]
+        for cap_field in override_caps:
+            if re.findall(fr"\b{cap_field.upper()}\b", _output) and not re.findall(fr"\b{cap_field.upper()}\b", input_str):
+                _output = re.sub(fr"\b{cap_field.upper()}\b", cap_field.lower(), _output)
+
+        # Workaround to space out math operations
+        _output = re.sub(r'\b([-+*/])(\d)', " \1 \2", _output)
 
         return _output
 
