@@ -1635,7 +1635,7 @@ check_recent_user_activity
 
     def logichub_check_recent_user_activity_v2(self):
         self.write_clipboard(r"""check_recent_user_activity() {
-    docker exec postgres psql -P pager --u daemon system_events -c "select lhub_ts, username, event_type from (select * from (select *, max(id) over (partition by username) as max_id from system_events WHERE user_agent != '' AND username NOT IN ('system', 'mdr-automation', 'lh-monitoring') AND event_type NOT IN ('BatchExecuted')) s1 where id = max_id AND lhub_ts > NOW() - INTERVAL '4 HOURS') s2 where event_type NOT IN ('UserLoginFailed', 'UserLogoutSuccess', 'UserAccountLocked') order by lhub_ts asc"
+    docker exec postgres psql -P pager --u daemon system_events -c "select lhub_ts, username, event_type from (select * from (select *, max(id) over (partition by username) as max_id from system_events WHERE user_agent != '' AND username NOT IN ('system', 'mdr-automation', 'lh-monitoring') AND event_type NOT IN ('BatchExecuted')) s1 where id = max_id AND lhub_ts > NOW() - INTERVAL '4 HOURS') s2 where event_type NOT IN ('UserLoginFailed', 'UserLogoutSuccess', 'UserAccountLocked') AND LOWER(event_type) NOT LIKE 'batch%' order by lhub_ts asc"
     printf "Current date:\n\n    $(TZ=UTC date +"%Y-%m-%d %H:%M:%S (%Z)")\n\n"
 }
 check_recent_user_activity
