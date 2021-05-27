@@ -1059,7 +1059,8 @@ class Actions:
 
         # specific keyword replacements for forcing uppercase
         specific_functions_to_uppercase = [
-            "get_json_object", "from_unixtime", "min(", "max(", "sum(", "count("
+            "get_json_object", "from_unixtime", "min(", "max(", "sum(",
+            "count(", "coalesce("
         ]
         for f in specific_functions_to_uppercase:
             if f in _output:
