@@ -1526,6 +1526,10 @@ class Actions:
 
     # ---- Operators: Custom Lists ----
 
+    def reusable_get_custom_list_name_from_clipboard(self):
+        list_name = self.read_clipboard()
+        return re.sub('^"|"$', '', list_name)
+
     def logichub_operator_start_appendToList(self):
         """Operator Start: appendToList"""
         table_name = self.read_clipboard_for_table_name()
@@ -1533,7 +1537,7 @@ class Actions:
 
     def logichub_operator_start_loadList_without_filter(self, return_data=False):
         """Operator Start: loadList"""
-        list_name = self.read_clipboard()
+        list_name = self.reusable_get_custom_list_name_from_clipboard()
         output = f'loadList("{list_name}"'
         if return_data:
             return output
