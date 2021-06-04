@@ -630,10 +630,13 @@ class Actions:
         # ToDo Delete this and its method once confirmed it's no longer needed.
         self.make_action("Recent UI user activity (old version)", self.logichub_check_recent_user_activity, alternate=True)
 
-        self.make_action("Path to service container data", self.shell_lh_host_path_to_service_container_volume)
-        self.make_action("Path to lh-monitoring repo", self.shell_lh_host_path_to_lh_monitoring_repo)
-
         self.make_action("Stop and Start All Services", self.logichub_stop_and_start_services_in_one_line)
+
+        self.add_menu_section("File System Paths", text_color="blue", menu_depth=1)
+
+        self.make_action("lh-monitoring repo", self.shell_lh_host_path_to_lh_monitoring_repo)
+        self.make_action("node_data cache", self.shell_lh_host_path_to_node_data)
+        self.make_action("service container data", self.shell_lh_host_path_to_service_container_volume)
 
         self.print_in_menu("Shell: Service Container")
         self.make_action("List Edited Descriptors", self.lh_service_shell_list_edited_descriptors)
