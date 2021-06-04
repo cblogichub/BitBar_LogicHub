@@ -1619,10 +1619,13 @@ class Actions:
         self.write_clipboard(f'sudo usermod -a -G docker {self.config.local_user}')
 
     def shell_lh_host_path_to_service_container_volume(self):
-        self.write_clipboard(f'/var/lib/docker/volumes/logichub_data/_data/service/')
+        self.write_clipboard('/var/lib/docker/volumes/logichub_data/_data/service/')
 
     def shell_lh_host_path_to_lh_monitoring_repo(self):
-        self.write_clipboard(f'/var/lib/docker/volumes/logichub_data/_data/shared/lh-monitoring/mdr_prod_local_scripts/')
+        self.write_clipboard('/var/lib/docker/volumes/logichub_data/_data/shared/lh-monitoring/mdr_prod_local_scripts/')
+
+    def shell_lh_host_path_to_node_data(self):
+        self.write_clipboard('/var/lib/docker/volumes/logichub_data/_data/shared/node_data/')
 
     def logichub_check_recent_user_activity(self):
         self.write_clipboard(r"""check_recent_user_activity() {
