@@ -1070,7 +1070,7 @@ class Actions:
                 _output = _output.replace(f, f.upper())
 
         # Workaround for "result" and other fields always getting turned into uppercase by sqlparse
-        override_caps = ["result", "temp"]
+        override_caps = ["result", "temp", "version", "usage"]
         for cap_field in override_caps:
             if re.findall(fr"\b{cap_field.upper()}\b", _output) and not re.findall(fr"\b{cap_field.upper()}\b", input_str):
                 _output = re.sub(fr"\b{cap_field.upper()}\b", cap_field.lower(), _output)
