@@ -23,7 +23,7 @@ check_recent_user_activity() {
     printf "    %s\n" "${users_all[@]}" | sort -u | grep -P ".*"
 
     printf "\n\nLatest activity:\n\n"
-    echo "$(for i in "${users_all[@]}"; do printf "    $(zgrep -ih "user: ${i}" "${previous_service_log}" /var/log/logichub/service/service.log | grep -P "^\d{4}-" | tail -n1 | grep "${i}")\n"; done)" | sort -u | grep -P "^ *20\d{2}-\d{2}-\d{2} [\d:.]+ [+\d]+|(?<=User: )[^\s\(]+"
+    for i in "${users_all[@]}"; do printf "    %s\n" "$(zgrep -ih "user: ${i}" "${previous_service_log}" /var/log/logichub/service/service.log | grep -P "^\d{4}-" | tail -n1 | grep "${i}")"; done | sort -u | grep -P "^ *20\d{2}-\d{2}-\d{2} [\d:.]+ [+\d]+|(?<=User: )[^\s\(]+"
     printf "\n\nCurrent date:\n\n"
     printf "    %s\n" "$(TZ=UTC date +"%Y-%m-%d %H:%M:%S (%Z)")"
     printf "\n"
