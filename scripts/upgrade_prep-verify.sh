@@ -40,7 +40,7 @@ make_sure_path_exists() {
 
     # If a path was provided and it does not exist, create it and set ownership
     # If no path was provided, then skip
-    [[ ! -z "${file_path}" ]] && [[ ! -d "${file_path}" ]] && {
+    [[ -n "${file_path}" ]] && [[ ! -d "${file_path}" ]] && {
         # If no owner was provided, default to "logichub:logichub"
         [[ -z "${owner}" ]] && owner="logichub:logichub"
 
