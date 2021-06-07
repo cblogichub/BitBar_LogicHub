@@ -10,8 +10,8 @@ skip_review() {
 
 # ToDo Look into this... getting "pause_for_review:read:2: -p: no coprocess" errors on solutions-lab in zsh
 pause_for_review() {
-    printf "\n\n\n\nReview: $1\n\n"
     read -p "Press enter when finished reviewing..."
+    printf "\n\n\n\nReview: %s\n\n" "$1"
     skip_review
 }
 
@@ -25,7 +25,7 @@ check_recent_user_activity() {
     printf "\n\nLatest activity:\n\n"
     echo "$(for i in "${users_all[@]}"; do printf "    $(zgrep -ih "user: ${i}" "${previous_service_log}" /var/log/logichub/service/service.log | grep -P "^\d{4}-" | tail -n1 | grep "${i}")\n"; done)" | sort -u | grep -P "^ *20\d{2}-\d{2}-\d{2} [\d:.]+ [+\d]+|(?<=User: )[^\s\(]+"
     printf "\n\nCurrent date:\n\n"
-    printf "    $(TZ=UTC date +"%Y-%m-%d %H:%M:%S (%Z)")\n"
+    printf "    %s\n" "$(TZ=UTC date +"%Y-%m-%d %H:%M:%S (%Z)")"
     printf "\n"
 }
 
@@ -41,7 +41,7 @@ make_sure_path_exists() {
         # If no owner was provided, default to "logichub:logichub"
         [[ -z "${owner}" ]] && owner="logichub:logichub"
 
-        printf "Directory not found: ${file_path}\nCreating directory, and setting permissions to \"${owner}\"\n\n"
+        printf "Directory not found: %s\nCreating directory, and setting permissions to \"%s\"\n\n" "${file_path}" "${owner}"
         sudo mkdir -p "${file_path}"
         sudo chown "${owner}" "${file_path}"
     }
