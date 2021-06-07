@@ -8,10 +8,10 @@ skip_review() {
     printf "\n*********************************************************\n\n"
 }
 
-# ToDo Look into this... getting "pause_for_review:read:2: -p: no coprocess" errors on solutions-lab in zsh
 pause_for_review() {
-    read -p "Press enter when finished reviewing..."
     printf "\n\n\n\nReview: %s\n\n" "$1"
+    printf "Press enter when finished reviewing..."
+    read
     skip_review
 }
 
