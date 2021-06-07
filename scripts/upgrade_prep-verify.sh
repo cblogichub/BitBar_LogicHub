@@ -120,7 +120,7 @@ run_prep_commands() {
 
     # Check for modified files in /opt/docker/conf within the service container
     most_common_date="$(docker exec -it service find /opt/docker/conf -type f -exec ls -l \{\} \; | grep -Po '\w+ +\d+ +[\d:]+' | uniq -c | sort -n | tail -n1 | grep -Po '[A-Za-z].*')"
-    matches=$(docker exec -it service find /opt/docker/conf/ -type f -exec ls -l \{\} \; | grep -v " ${most_common_date} ")
+    matches=$(docker exec -it service find /opt/docker/conf/ -type f -exec ls -l \{\} \; | grep -v '/opt/docker/conf/resources/steps/' | grep -v " ${most_common_date} ")
     if [[ -z "${matches}" ]]; then
         echo "No modified stock config files (/opt/docker/config) in the service container; skipping..."
         skip_review
