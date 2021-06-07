@@ -63,15 +63,6 @@ run_prep_commands() {
     sudo lsblk -a
     pause_for_review "lsblk: Check to be sure that there are no problems"
 
-    matches=$(history | grep -v "grep \"su \"" | grep "su " | grep -vP "\b(?:print_blank_lines|run_backups)\b")
-    if [[ -z "${matches}" ]]; then
-        echo "no su in bash history; skipping..."
-        skip_review
-    else
-        echo "${matches}"
-        pause_for_review "Take note... su in history (in case it suggests that much work was done as a different user)"
-    fi
-
     matches=$(docker exec -it service find /opt/docker/data/service -name "pip-requirements.txt")
     if [[ -z "${matches}" ]]; then
         printf "pip-requirements.txt file not found. creating an empty file...\n\n"
