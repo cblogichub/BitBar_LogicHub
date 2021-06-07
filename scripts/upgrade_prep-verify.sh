@@ -68,10 +68,16 @@ run_prep_commands() {
         printf "pip-requirements.txt file not found. creating an empty file...\n\n"
         make_sure_path_exists_in_service_container /opt/docker/data/service/scripts
         docker exec -it service touch /opt/docker/data/service/scripts/pip-requirements.txt
+        skip_review
     else
-        printf "Displaying packages in pip-requirements.txt:\n\n"
-        docker exec -it service cat /opt/docker/data/service/scripts/pip-requirements.txt
-        printf "\n"
+        matches="$(docker exec -it service cat /opt/docker/data/service/scripts/pip-requirements.txt)"
+        if [[ -z "${matches}" ]]; then
+            echo "No Python packages in pip-requirements.txt; skipping..."
+            skip_review
+        else
+            echo "${matches}"
+            pause_for_review "Review: Showing for terminal history: Python packages in pip-requirements.txt"
+        fi
     fi
     # ToDo there should be a divider here, but they show up together.
     #  Using solutions as an example:
