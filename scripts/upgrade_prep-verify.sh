@@ -143,12 +143,13 @@ run_prep_commands() {
 
     #---> CHECK: Size of logs (host)
 
+    make_sure_path_exists /var/log/logichub/threaddumps/
     echo "Deleting old log files"
     # Postgresql logs do not appear to be aged off like other logs, and other old files never get cleaned up, so delete all logs older than 60 days
     sudo find /var/log/logichub/postgres -type f -mtime +60 -delete
     sudo find /var/log/logichub/service -type f -mtime +60 -delete
+    sudo find /var/log/logichub/threaddumps/ -type f -mtime +30 -delete
 
-    make_sure_path_exists /var/log/logichub/threaddumps/
     printf "Total Log Size:\n"
     du -sh /var/log/logichub
     printf "\nThread Dumps (will be excluded):\n"
