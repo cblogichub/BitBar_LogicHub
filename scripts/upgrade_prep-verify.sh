@@ -30,6 +30,9 @@ check_recent_user_activity() {
 }
 
 make_sure_path_exists() {
+
+    # ToDo Add a step to check whether Stepped Navigation is enabled in dynamic.conf
+
     file_path=${1}
 
     # If a second input was provided, use it as the user:group owner values
@@ -54,14 +57,23 @@ make_sure_path_exists_in_service_container() {
 
 run_prep_commands() {
     printf "\n\n"
+
+    #---> CHECK: RECENT USER ACTIVITY
+
     check_recent_user_activity
     pause_for_review "Review recent user activity and see if instance is currently/recently in use"
+
+    #---> CHECK: FSTAB (host)
 
     cat /etc/fstab
     pause_for_review "/etc/fstab: Check to be sure that there are no problems or duplicates"
 
+    #---> CHECK: LSBLK (host)
+
     sudo lsblk -a
     pause_for_review "lsblk: Check to be sure that there are no problems"
+
+    #---> CHECK: PIP-REQUIREMENTS (service container)
 
     matches=$(docker exec -it service find /opt/docker/data/service -name "pip-requirements.txt")
     if [[ -z "${matches}" ]]; then
@@ -79,25 +91,8 @@ run_prep_commands() {
             pause_for_review "Review: Showing for terminal history: Python packages in pip-requirements.txt"
         fi
     fi
-    # ToDo there should be a divider here, but they show up together.
-    #  Using solutions as an example:
-    #            *********************************************************
-    #
-    #            Displaying packages in pip-requirements.txt:
-    #
-    #            selenium
-    #
-    #
-    #            pip install http.client
-    #            pip install httpclient
-    #
-    #
-    #
-    #
-    #            Review: pip commands in service container's bash history... make sure no packages were installed that are not in pip-requirements.txt
-    #
-    #            Press enter when finished reviewing...
 
+    #---> CHECK: PIP COMMANDS IN HISTORY (service container)
 
     matches=$(docker exec -it service cat /root/.bash_history | grep -P '^pip (?!list)|pip +install')
     if [[ -z "${matches}" ]]; then
@@ -107,6 +102,8 @@ run_prep_commands() {
         echo "${matches}"
         pause_for_review "pip commands in service container's bash history... make sure no packages were installed that are not in pip-requirements.txt"
     fi
+
+    #---> CHECK: CONF FILE REFERENCES IN HISTORY (service container)
 
     cmd='docker exec -it service cat /root/.bash_history | grep -v "dynamic.conf" | grep -P "\S+\.conf"'
     matches=$(eval ${cmd})
@@ -118,7 +115,8 @@ run_prep_commands() {
         pause_for_review "Take note... .conf in service container's bash history, in case unique customizations have been made that should be taken into consideration"
     fi
 
-    # Check for modified files in /opt/docker/conf within the service container
+    #---> CHECK: Check for modified files in /opt/docker/conf (service container)
+
     most_common_date="$(docker exec -it service find /opt/docker/conf -type f -exec ls -l \{\} \; | grep -Po '\w+ +\d+ +[\d:]+' | uniq -c | sort -n | tail -n1 | grep -Po '[A-Za-z].*')"
     matches=$(docker exec -it service find /opt/docker/conf/ -type f -exec ls -l \{\} \; | grep -v '/opt/docker/conf/resources/steps/' | grep -v " ${most_common_date} ")
     if [[ -z "${matches}" ]]; then
@@ -129,6 +127,8 @@ run_prep_commands() {
         pause_for_review 'One or more files modified in /opt/docker/config in the service container. These changes will NOT be carried over during an upgrade!'
     fi
 
+    #---> CHECK: Size of /opt/docker/data/service (service container)
+
     make_sure_path_exists_in_service_container /opt/docker/data/service/heapdumps
     printf "/opt/docker/data/service:\n\n"
     docker exec -it service du -sh /opt/docker/data/service | grep -P "\d\S+"
@@ -136,8 +136,12 @@ run_prep_commands() {
     docker exec -it service du -sh /opt/docker/data/service/heapdumps | grep -P "\d\S*"
     pause_for_review "size - /opt/docker/data/service (make sure this isn't excessive gzipping during backup)"
 
+    #---> CHECK: Size of /opt/docker/resources (service container)
+
     docker exec -it service du -sh /opt/docker/resources | grep -P "\d\S+"
     pause_for_review "size - /opt/docker/resources (make sure this isn't excessive gzipping during backup)"
+
+    #---> CHECK: Size of logs (host)
 
     echo "Deleting old log files"
     # Postgresql logs do not appear to be aged off like other logs, and other old files never get cleaned up, so delete all logs older than 60 days
@@ -151,6 +155,8 @@ run_prep_commands() {
     du -sh /var/log/logichub/threaddumps/
     pause_for_review "size - /var/log/logichub (make sure this isn't excessive gzipping during backup)"
 
+    #---> CHECK: presence of legacy custom modules (old method no longer recommended; service container)
+
     matches=$(docker exec -it service cat /opt/docker/data/service/conf/dynamic.conf | grep "lhub.steps.userdefined.dir"|grep -Po '=\s*\K.*')
     if [[ -z "${matches}" ]]; then
         echo "lhub.steps.userdefined.dir not defined in dynamic.conf; skipping..."
@@ -159,6 +165,8 @@ run_prep_commands() {
         docker exec -it service cat /opt/docker/data/service/conf/dynamic.conf | grep -P "^\s*lhub.steps.userdefined.dir"
         pause_for_review "user-defined steps in dynamic.conf"
     fi
+
+    #---> CHECK: presence of legacy custom integrations (old method no longer recommended; service container)
 
     most_common_date=$(docker exec -it service ls -l /opt/docker/resources/integrations | grep -P "\.json" | grep -Po '\w+ +\d+ +[\d:]+' | uniq -c | sort -n | tail -n1 | grep -Po '[A-Za-z].*')
     matches=$(docker exec -it service ls -l /opt/docker/resources/integrations | grep -v "${most_common_date}" | grep -P '\S+\.json(?!\.)')
@@ -170,6 +178,8 @@ run_prep_commands() {
         pause_for_review "edited descriptor files (note that these need to be backed up, compared in case they are newer than the version being upgraded to, and potentially restored after upgrade)"
     fi
 
+    #---> CHECK: duplicates in sudoers (host)
+
     # Count occurrences to see if there are any duplicates, and grep only lines with a count greater than 1
     matches=$(sudo cat /etc/sudoers | grep logichub | uniq -c | sed -E 's/^ +//' | grep -P '^[2-9]|1[0-9]')
     if [[ -z "${matches}" ]]; then
@@ -180,6 +190,8 @@ run_prep_commands() {
         pause_for_review "look for duplicates in sudoers. Older installers (and maybe current too?) often duplicate entries, so this is a cleanup task."
     fi
 
+    #---> CHECK: custom descriptors or jar files in the scripts table (postgres)
+
     matches=$(docker exec -it postgres psql -P pager --u daemon lh -c "select kind, name from scripts where kind != '\"KindPython\"' order by kind, name;")
     if [[ "${matches}" == *"(0 rows)"* ]]; then
         echo "No descriptors or jar files in the scripts table; skipping..."
@@ -189,14 +201,16 @@ run_prep_commands() {
         pause_for_review "Take note of descriptors and jar files in the scripts table, if any, just in case"
     fi
 
+    #---> CHECK: dynamic.conf (host)
+
     docker exec -it service cat /opt/docker/data/service/conf/dynamic.conf
     pause_for_review "Showing for terminal history: dynamic.conf"
+
+    #---> CHECK: integration connections (postgres)
 
     docker exec -it postgres psql -P pager --u daemon lh -c "select substring(cast(descriptor::json->'name' as varchar) from '\"(.+)\"') as \"Integration Name\", label, id, integration_id, substring(cast(descriptor::json->'runtimeEnvironment'->'descriptor'->'image' as varchar) from ':([^:]+?)\"$') as \"Docker tag\", substring(cast(descriptor::json->'runtimeEnvironment'->'descriptor'->'image' as varchar) from '\"(.+)\"') as \"Full Docker Image\" from integration_instances order by integration_id, label;"
     pause_for_review "Showing for terminal history: integration instances with image versions"
 
-    # ToDo Add a step to check whether Stepped Navigation is enabled in dynamic.conf
-    #     For this and others where we're just checking for something, change the logic so we just move on without requiring the user to read and hit enter
     printf "Complete.\n\n"
 }
 
