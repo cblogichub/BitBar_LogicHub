@@ -34,6 +34,8 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 import csv
+import argparse
+
 
 # ToDo Add a custom path param for ini file
 chrome_driver_default_paths = [
@@ -65,6 +67,20 @@ user_config_file = "logichub_tools.ini"
 
 # Will be updated if enabled via the config file
 debug_enabled = False
+
+
+def get_args():
+    # Range of available args and expected input
+    parser = argparse.ArgumentParser(description="LogicHub xbar plugin")
+
+    # Inputs expected from user
+    parser.add_argument("action", nargs='?', type=str, help="Name of an action to execute")
+
+    # Optional args:
+    parser.add_argument("-l", "--list", dest="list_actions", action="store_true", help="List available actions")
+
+    # take in the arguments provided by user
+    return parser.parse_args()
 
 
 class Log:
@@ -2577,6 +2593,10 @@ check_recent_user_activity
         if not action:
             self.print_menu_output()
             return
+        # Not required, but helps with testing to be able to paste in the
+        # original name of an action rather than have to know what the sanitized
+        # action name ends up being
+        action = re.sub(r'\W', "_", action)
         if action not in self.action_list:
             raise Exception("Not a valid action")
         else:
@@ -2591,10 +2611,20 @@ log = Log()
 
 
 def main():
+    args = get_args()
     config = Config()
-    requested_action = None if len(sys.argv) == 1 else sys.argv[1]
     bar = Actions(config)
-    bar.execute_plugin(requested_action)
+
+    if args.list_actions:
+        for a in sorted(bar.action_list.keys()):
+            """
+            service_container_data: {"id": "service_container_data", "name": "service container data", "action": "<bound method Actions.shell_lh_host_path_to_service_container_volume of <__main__.Actions object at 0x1067aae50>>"}
+            """
+            action_path = re.findall(r"Actions.\S+", str(bar.action_list[a].action))[0]
+            print(f'{bar.action_list[a].name}:\n\tID: {bar.action_list[a].id}\n\tAction: {action_path}\n')
+        exit(0)
+
+    bar.execute_plugin(args.action)
 
 
 if __name__ == "__main__":
