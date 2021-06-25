@@ -2572,7 +2572,7 @@ check_recent_user_activity
         _output = Reusable.time_epoch_to_str(_input).strip()
         self.display_notification(f'{_input} = {_output}')
         if update_clipboard:
-            self.write_clipboard(_output)
+            self.write_clipboard(_output, skip_notification=True)
 
     def epoch_time_as_local_time_convert(self):
         self.action_epoch_time_to_str(update_clipboard=True)
