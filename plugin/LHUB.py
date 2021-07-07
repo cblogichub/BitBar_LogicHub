@@ -819,6 +819,7 @@ class Actions:
         self.make_action("URL Encoding: Encode (from clipboard)", self.encode_url_encoding, action_id="encode_url_encoding")
         self.make_action("URL Encoding: Decode (from clipboard)", self.decode_url_encoding, action_id="decode_url_encoding")
         self.make_action("Strip non-ascii characters", self.remove_non_ascii_characters, keyboard_shortcut="CmdOrCtrl+OptionOrAlt+s")
+        self.make_action("White space to underscores", self.white_space_to_underscores, keyboard_shortcut="CmdOrCtrl+shift+u")
 
         self.add_menu_section("Time", text_color="blue", menu_depth=1)
 
@@ -2571,6 +2572,11 @@ check_recent_user_activity
         string_encode = _input.encode("ascii", "ignore")
         string_decode = string_encode.decode()
         self.write_clipboard(string_decode)
+
+    def white_space_to_underscores(self):
+        """White space to underscores"""
+        _input = self.read_clipboard()
+        self.write_clipboard(re.sub(r'\s+', '_', _input))
 
     def action_epoch_time_to_str(self, update_clipboard=False):
         """Show epoch time as local time"""
