@@ -599,6 +599,7 @@ class Actions:
         self.add_menu_section("DSL Commands", text_color="blue", menu_depth=1)
 
         self.make_action("Integration Error Check AND forceFail (from table name)", self.logichub_dsl_integ_error_check_and_force_fail)
+        self.make_action("Add batch info and drop temporary column (from table name)", self.logichub_dsl_batch_info)
 
         # ------------ Menu Sub-section: LQL operators ------------ #
 
@@ -1206,6 +1207,25 @@ class Actions:
         first_table = self._logichub_integ_error_sql(_input)
         self.write_clipboard(
             f"[{first_table}] as error_check\n| [forceFail(error_check, \"integ_error\")] as fail_if_error\n| [dropColumns(fail_if_error, \"integ_error\", \"exit_code\", \"stdout\", \"stderr\")] as final_output")
+
+    def logichub_dsl_batch_info(self):
+        template = r"""[
+  addExecutionMetadata(join_message_parts)
+] as t1
+
+| [
+  SELECT *,
+    BIGINT(GET_JSON_OBJECT(lhub_execution_metadata, "$.interval_start_millis")) AS interval_start_millis,
+    BIGINT(GET_JSON_OBJECT(lhub_execution_metadata, "$.interval_end_millis")) AS interval_end_millis,
+    BIGINT(GET_JSON_OBJECT(lhub_execution_metadata, "$.batch_url")) AS batch_url
+  FROM t1
+] as t2
+
+| [
+  dropColumns(t2, "lhub_execution_metadata")
+] as t_output"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(template.format(table=table_name))
 
     def logichub_sql_start_from_tabs(self):
         _columns_formatted = self._split_tabs_to_columns(update_clipboard=False)
