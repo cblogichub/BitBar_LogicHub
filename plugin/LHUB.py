@@ -618,6 +618,7 @@ class Actions:
 
         self.add_menu_section("Joins", text_color="blue", menu_depth=1)
 
+        self.make_action("autoJoin", self.logichub_operator_start_autoJoin, menu_depth=1)
         self.make_action("autoJoinTables", self.logichub_operator_start_autoJoinTables, menu_depth=1)
         self.make_action("joinTables", self.logichub_operator_start_joinTables, menu_depth=1)
 
@@ -1535,6 +1536,10 @@ class Actions:
         self.write_clipboard(f'waitForMillis({table_name}, NUMBER)')
 
     # ---- Operators: Joins ----
+
+    def logichub_operator_start_autoJoin(self):
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'autoJoin({table_name}, TABLE2)')
 
     def logichub_operator_start_autoJoinTables(self):
         table_name = self.read_clipboard_for_table_name()
