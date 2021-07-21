@@ -1210,14 +1210,14 @@ class Actions:
 
     def logichub_dsl_batch_info(self):
         template = r"""[
-  addExecutionMetadata(join_message_parts)
+  addExecutionMetadata({table})
 ] as t1
 
 | [
   SELECT *,
     BIGINT(GET_JSON_OBJECT(lhub_execution_metadata, "$.interval_start_millis")) AS interval_start_millis,
     BIGINT(GET_JSON_OBJECT(lhub_execution_metadata, "$.interval_end_millis")) AS interval_end_millis,
-    BIGINT(GET_JSON_OBJECT(lhub_execution_metadata, "$.batch_url")) AS batch_url
+    GET_JSON_OBJECT(lhub_execution_metadata, "$.batch_url") AS batch_url
   FROM t1
 ] as t2
 
