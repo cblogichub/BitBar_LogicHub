@@ -646,7 +646,7 @@ class Actions:
         self.make_action("Recent UI user activity", self.logichub_check_recent_user_activity_v2)
 
         # ToDo Delete this and its method once confirmed it's no longer needed.
-        self.make_action("Recent UI user activity (old version)", self.logichub_check_recent_user_activity, alternate=True)
+        self.make_action("Recent UI user activity (old version)", self.logichub_check_recent_user_activity_v1, alternate=True)
 
         self.make_action("Stop and Start All Services", self.logichub_stop_and_start_services_in_one_line)
 
@@ -1669,7 +1669,7 @@ class Actions:
     def shell_lh_host_path_to_node_data(self):
         self.write_clipboard('/var/lib/docker/volumes/logichub_data/_data/shared/node_data/')
 
-    def logichub_check_recent_user_activity(self):
+    def logichub_check_recent_user_activity_v1(self):
         self.write_clipboard(r"""check_recent_user_activity() {
     # New consolidated list of all users who have logged in during the current and previous log files
     previous_service_log="$(find /var/log/logichub/service -name "service.log.2*gz"| sort | tail -n1)"
