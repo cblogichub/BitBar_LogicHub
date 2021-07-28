@@ -1677,7 +1677,7 @@ class Actions:
         self.write_clipboard(r"""check_recent_user_activity() {
     # New consolidated list of all users who have logged in during the current and previous log files
     previous_service_log="$(find /var/log/logichub/service -name "service.log.2*gz"| sort | tail -n1)"
-    users_all=($(sudo zgrep -ohP "Login request: *\K\S+" "${previous_service_log}" /var/log/logichub/service/service.log | sort -u))
+    users_all=($(sudo zgrep -ohP "Login request: *\K\S+" "${previous_service_log}" /var/log/logichub/service/service.log | grep -Pv 'lh-monitoring' | sort -u))
     printf "Users who have logged in recently:\n\n"
     printf "    %s\n" "${users_all[@]}" | sort -u | grep -P ".*"
 
