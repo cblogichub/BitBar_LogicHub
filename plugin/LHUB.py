@@ -598,6 +598,10 @@ class Actions:
 
         self.add_menu_section("DSL Commands", text_color="blue", menu_depth=1)
 
+        # ToDo Remove "BETA" prefix after this has been used a while
+        self.make_action("BETA: Reformat DSL command [simple]", self.logichub_dsl_reformat_simple)
+        self.make_action("BETA: Reformat DSL command [pretty print SQL]", self.logichub_dsl_reformat_pretty)
+
         self.make_action("Integration Error Check AND forceFail (from table name)", self.logichub_dsl_integ_error_check_and_force_fail)
         self.make_action("Add batch info and drop temporary column (from table name)", self.logichub_dsl_batch_info)
 
@@ -1060,8 +1064,7 @@ class Actions:
     def make_backup_command():
         return "sudo /opt/logichub/scripts/backup.sh"
 
-    @staticmethod
-    def pretty_print_sql(input_str, wrap_after=0):
+    def pretty_print_sql(self, input_str, wrap_after=0):
         """
         Reusable method to "pretty print" SQL
 
@@ -1069,39 +1072,42 @@ class Actions:
         :param wrap_after:
         :return:
         """
-        # Replace line breaks with spaces, then trim leading and trailing whitespace
-        _output = re.sub(r'[\n\r]+', ' ', input_str).strip()
+        try:
+            # Replace line breaks with spaces, then trim leading and trailing whitespace
+            _output = re.sub(r'[\n\r]+', ' ', input_str).strip()
 
-        # If wrapped in ticks, strip those off. We no longer require them in LogicHub.
-        _output = re.sub(r'^`|(?<!\\)`$', '', _output)
+            # If wrapped in ticks, strip those off. We no longer require them in LogicHub.
+            _output = re.sub(r'^`|(?<!\\)`$', '', _output)
 
-        _output = sqlparse.format(
-            _output, reindent=True, keyword_case='upper', indent_width=4,
-            wrap_after=wrap_after, identifier_case=None)
+            _output = sqlparse.format(
+                _output, reindent=True, keyword_case='upper', indent_width=4,
+                wrap_after=wrap_after, identifier_case=None)
 
-        # nit: if just selecting "*" then drop that initial newline. no reason to drop "FROM" to the next row.
-        if re.match(r"^SELECT \*\nFROM ", _output):
-            _output = re.sub(r"^SELECT \*\n", "SELECT * ", _output)
+            # nit: if just selecting "*" then drop that initial newline. no reason to drop "FROM" to the next row.
+            if re.match(r"^SELECT \*\nFROM ", _output):
+                _output = re.sub(r"^SELECT \*\n", "SELECT * ", _output)
 
-        # specific keyword replacements for forcing uppercase
-        specific_functions_to_uppercase = [
-            "get_json_object", "from_unixtime", "min(", "max(", "sum(",
-            "count(", "coalesce(", "regexp_replace", "regexp_extract("
-        ]
-        for f in specific_functions_to_uppercase:
-            if f in _output:
-                _output = _output.replace(f, f.upper())
+            # specific keyword replacements for forcing uppercase
+            specific_functions_to_uppercase = [
+                "get_json_object", "from_unixtime", "min(", "max(", "sum(",
+                "count(", "coalesce(", "regexp_replace", "regexp_extract("
+            ]
+            for f in specific_functions_to_uppercase:
+                if f in _output:
+                    _output = _output.replace(f, f.upper())
 
-        # Workaround for "result" and other fields always getting turned into uppercase by sqlparse
-        override_caps = ["result", "temp", "version", "usage"]
-        for cap_field in override_caps:
-            if re.findall(fr"\b{cap_field.upper()}\b", _output) and not re.findall(fr"\b{cap_field.upper()}\b", input_str):
-                _output = re.sub(fr"\b{cap_field.upper()}\b", cap_field.lower(), _output)
+            # Workaround for "result" and other fields always getting turned into uppercase by sqlparse
+            override_caps = ["result", "temp", "version", "usage"]
+            for cap_field in override_caps:
+                if re.findall(fr"\b{cap_field.upper()}\b", _output) and not re.findall(fr"\b{cap_field.upper()}\b", input_str):
+                    _output = re.sub(fr"\b{cap_field.upper()}\b", cap_field.lower(), _output)
 
-        # Workaround to space out math operations
-        _output = re.sub(r'\b([-+*/])(\d)', " \1 \2", _output)
-
-        return _output
+            # Workaround to space out math operations
+            _output = re.sub(r'\b([-+*/])(\d)', " \1 \2", _output)
+        except Exception as err:
+            self.display_notification_error("Exception from sqlparse: {}".format(repr(err)))
+        else:
+            return _output
 
     ############################################################################
     # Section:
@@ -1118,12 +1124,8 @@ class Actions:
         :return:
         """
         _input = self.read_clipboard()
-        try:
-            _output = self.pretty_print_sql(_input, **kwargs)
-        except Exception as err:
-            self.display_notification_error("Exception from sqlparse: {}".format(repr(err)))
-        else:
-            self.write_clipboard(_output)
+        _output = self.pretty_print_sql(_input, **kwargs)
+        self.write_clipboard(_output)
 
     def logichub_pretty_print_sql_wrapped(self):
         """
@@ -1205,6 +1207,66 @@ class Actions:
 
     def logichub_sql_start_with_integ_error_check_without_table_name(self):
         self.write_clipboard(self._logichub_integ_error_sql())
+
+    def _reusable_fetch_and_split_dsl_from_clipboard(self):
+        new_dsl_list = []
+        error_title = "DSL Format Error"
+
+        _input = self.read_clipboard()
+        if not re.match(r'((?:(?<=^)|(?<=\|))\s*\[.*?]\s+as\s+\w+)+\s*$', _input, re.DOTALL):
+            self.display_notification_error('Input not recognized as valid DSL', title=error_title)
+
+        for part in [x.strip() for x in re.split(r'\s*\|\s*(?=\[)', _input)]:
+            part_type = None
+            matches = re.search(r'^\[\s*(?P<lql>\S.*?)\s*]\s*as\s*(?P<alias>\w+)', part, re.DOTALL)
+            if not matches:
+                self.display_notification_error('Unexpected DSL format: empty LQL block found', title=error_title)
+            sql_part = matches.group("lql").strip()
+            alias_part = matches.group("alias").strip()
+
+            if re.match(r'^(?i)select\s+(?!\()', sql_part) and re.search(r'(?i)\bfrom\b', sql_part):
+                part_type = 'sql'
+            elif re.match(r'^\w+\s*\(.+\)$', sql_part.strip(), re.DOTALL):
+                part_type = 'operator'
+            else:
+                self.display_notification_error(f'Unexpected DSL format: unable to parse: {sql_part}')
+
+            new_dsl_list.append({
+                'lql': sql_part,
+                'alias': alias_part,
+                'type': part_type
+            })
+
+        if not new_dsl_list:
+            self.display_notification_error('An error occurred: split DSL list came out empty', title=error_title)
+        return new_dsl_list
+
+    def logichub_dsl_reformat_simple(self):
+        """ Reformat DSL command [simple] """
+        dsl_parts = self._reusable_fetch_and_split_dsl_from_clipboard()
+        new_dsl_string = ""
+        for part in dsl_parts:
+            new_dsl_string += f'[\n    {part["lql"]}\n] as {part["alias"]}\n\n| '
+        if not new_dsl_string:
+            self.display_notification_error('An error occurred: new DSL string came out empty', title=error_title)
+        self.write_clipboard(new_dsl_string[0:-4])
+
+    def logichub_dsl_reformat_pretty(self):
+        """ Reformat DSL command [pretty print SQL] """
+        dsl_parts = self._reusable_fetch_and_split_dsl_from_clipboard()
+        print(json.dumps(dsl_parts, indent=2))
+        new_dsl_string = ""
+        for part in dsl_parts:
+            sql_part = part["lql"]
+            alias_part = part["alias"]
+            part_type = part['type']
+            sql = sql_part
+            if part['type'] == 'sql':
+                sql = self.pretty_print_sql(sql_part).replace('\n', '\n    ')
+            new_dsl_string += f'[\n    {sql}\n] as {alias_part}\n\n| '
+        if not new_dsl_string:
+            self.display_notification_error('An error occurred: new DSL string came out empty', title=error_title)
+        self.write_clipboard(new_dsl_string[0:-4])
 
     def logichub_dsl_integ_error_check_and_force_fail(self):
         _input = self.read_clipboard_for_table_name()
