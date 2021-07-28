@@ -599,8 +599,8 @@ class Actions:
         self.add_menu_section("DSL Commands", text_color="blue", menu_depth=1)
 
         # ToDo Remove "BETA" prefix after this has been used a while
-        self.make_action("BETA: Reformat DSL command [simple]", self.logichub_dsl_reformat_simple)
-        self.make_action("BETA: Reformat DSL command [pretty print SQL]", self.logichub_dsl_reformat_pretty)
+        self.make_action("BETA: Reformat DSL command [simple]", self.logichub_dsl_reformat_simple, keyboard_shortcut="CmdOrCtrl+shift+d")
+        self.make_action("BETA: Reformat DSL command [pretty print SQL]", self.logichub_dsl_reformat_pretty, keyboard_shortcut="CmdOrCtrl+OptionOrAlt+d")
 
         self.make_action("Integration Error Check AND forceFail (from table name)", self.logichub_dsl_integ_error_check_and_force_fail)
         self.make_action("Add batch info and drop temporary column (from table name)", self.logichub_dsl_batch_info)
