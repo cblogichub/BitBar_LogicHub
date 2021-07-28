@@ -527,6 +527,8 @@ class Actions:
         # dict to store all of the actions
         self.action_list = {}
 
+        # ToDo Move all of these to main so it's easier to find going forward!
+
         # ------------ Menu Section: LogicHub ------------ #
 
         self.add_menu_section(
@@ -541,6 +543,10 @@ class Actions:
         self.make_action("Event File URL path (static)", self.logichub_event_file_url_static, alternate=True)
 
         self.add_menu_section("SQL", text_color="blue", menu_depth=1)
+
+        # ToDo Add section for common SQL
+        #   LQL to convert XML to JSON: java_method('org.json.XML', 'toJSONObject', test_xml)
+        #   Case management custom fields
 
         self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql, keyboard_shortcut="CmdOrCtrl+shift+p")
         self.make_action("(Beta) Pretty Print SQL options", action=None, alternate=True)
@@ -863,6 +869,7 @@ class Actions:
         self.print_in_menu(f"Parent: {self.parent}")
         if self.menu_type in ('BitBar', 'xbar'):
             # Lastly, attempt to get the BitBar/xbar version and print it as an FYI
+            # ToDo Try changing this to read XML instead of relying on regex!
             try:
                 with open(f"/Applications/{self.menu_type}.app/Contents/Info.plist", "r") as app_file:
                     _app_info = app_file.read()
@@ -1577,6 +1584,8 @@ class Actions:
         _input = self._process_json_clipboard(sort_output=True, format_output=True, return_obj=True)
         _input = crawl(_input)
 
+        # _input = Reusable.sort_dict_by_values(_input)
+        # ToDo Try _sort_dicts_and_lists instead
         self.write_clipboard(json.dumps(_input, indent=2))
 
     # ---- Operators: General ----
