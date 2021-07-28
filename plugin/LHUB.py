@@ -693,6 +693,9 @@ class Actions:
 
         self.add_menu_section("Flows", text_color="blue", menu_depth=1)
 
+        self.make_action("All Flows, (latest versions only)", self.db_postgres_latest_flows)
+        self.make_action("All Flows [old v1], (latest versions only)", self.db_postgres_latest_flows_v1, alternate=True)
+
         self.make_action("Summarize Flows (latest versions only)", self.db_postgres_summarize_latest_flows)
         self.make_action("Summarize Flows Lite (latest versions only)", self.db_postgres_summarize_latest_flows_lite, alternate=True)
 
@@ -1791,6 +1794,18 @@ check_recent_user_activity
         """ List executing streams/batches """
         self.write_clipboard(
             r"""select b.name as "Stream Name", a.id as "Batch ID", substring(a.stream_id from '"(.+)"') as "Stream ID", a.id as "Batch ID", b.flow as "Flow ID" from batches a left join streams b on substring(a.stream_id from '(\d+)') :: int = b.id where state = 'executing' order by "Stream ID", "Batch ID";"""
+        )
+
+    def db_postgres_latest_flows(self):
+        """ All Flows [old v1], (latest versions only) """
+        self.write_clipboard(
+            """WITH temp__flows AS (\n    SELECT * FROM (\n    	SELECT *, MAX(version) OVER (PARTITION BY id) AS max_version\n    	FROM versioned_flows\n    ) a\n    WHERE version = max_version\n)\nSELECT * FROM temp__flows;"""
+        )
+
+    def db_postgres_latest_flows_v1(self):
+        """ All Flows, (latest versions only) """
+        self.write_clipboard(
+            """SELECT * FROM (SELECT *, MAX(version) OVER (PARTITION BY id) AS max_version FROM versioned_flows) a WHERE version = max_version;"""
         )
 
     def db_postgres_summarize_latest_flows(self):
