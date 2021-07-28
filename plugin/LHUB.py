@@ -678,6 +678,14 @@ class Actions:
 
         self.print_in_menu("DB: Postgres")
 
+        self.add_menu_section("Flows", text_color="blue", menu_depth=1)
+
+        self.make_action("All Flows, (latest versions only)", self.db_postgres_latest_flows)
+        self.make_action("All Flows [old v1], (latest versions only)", self.db_postgres_latest_flows_v1, alternate=True)
+
+        self.make_action("Summarize Flows (latest versions only)", self.db_postgres_summarize_latest_flows)
+        self.make_action("Summarize Flows Lite (latest versions only)", self.db_postgres_summarize_latest_flows_lite, alternate=True)
+
         self.add_menu_section("Integrations", text_color="blue", menu_depth=1)
 
         self.make_action("List Descriptors w/ Docker Images", self.db_postgres_descriptors_and_docker_images)
@@ -694,14 +702,6 @@ class Actions:
         self.add_menu_section("Streams and Batches", text_color="blue", menu_depth=1)
 
         self.make_action("List executing streams/batches", self.db_postgres_currently_running_streams)
-
-        self.add_menu_section("Flows", text_color="blue", menu_depth=1)
-
-        self.make_action("All Flows, (latest versions only)", self.db_postgres_latest_flows)
-        self.make_action("All Flows [old v1], (latest versions only)", self.db_postgres_latest_flows_v1, alternate=True)
-
-        self.make_action("Summarize Flows (latest versions only)", self.db_postgres_summarize_latest_flows)
-        self.make_action("Summarize Flows Lite (latest versions only)", self.db_postgres_summarize_latest_flows_lite, alternate=True)
 
         self.add_menu_section("Users", text_color="blue", menu_depth=1)
 
