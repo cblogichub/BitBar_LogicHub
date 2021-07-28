@@ -693,8 +693,8 @@ class Actions:
 
         self.add_menu_section("Flows", text_color="blue", menu_depth=1)
 
-        self.make_action("Summarize Flows (latest versions)", self.db_postgres_summarize_latest_flows)
-        self.make_action("Summarize Flows (Lite)", self.db_postgres_summarize_latest_flows_lite, alternate=True)
+        self.make_action("Summarize Flows (latest versions only)", self.db_postgres_summarize_latest_flows)
+        self.make_action("Summarize Flows Lite (latest versions only)", self.db_postgres_summarize_latest_flows_lite, alternate=True)
 
         self.add_menu_section("Users", text_color="blue", menu_depth=1)
 
@@ -1794,13 +1794,13 @@ check_recent_user_activity
         )
 
     def db_postgres_summarize_latest_flows(self):
-        """ Summarize Flows (latest versions) """
+        """ Summarize Flows (latest versions only) """
         self.write_clipboard(
             """select b.name as "Current Name", a.id as "Flow ID", b.version as "Current Version", b.created_at as "Last Modified", c.created_at as "Original Create Date" from (select id, min(version) as min_version, max(version) as max_version from versioned_flows group by id) a left join versioned_flows b on a.id = b.id and a.max_version = b.version left join versioned_flows c on a.id = c.id and a.min_version = c.version order by "Current Name";"""
         )
 
     def db_postgres_summarize_latest_flows_lite(self):
-        """ Summarize Flows (Lite) """
+        """ Summarize Flows Lite (latest versions only) """
         self.write_clipboard(
             """select b.name, a.id, a.max_version from (select id, min(version) as min_version, max(version) as max_version from versioned_flows group by id) a left join versioned_flows b on a.id = b.id and a.max_version = b.version;"""
         )
