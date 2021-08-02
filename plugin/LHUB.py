@@ -660,6 +660,8 @@ class Actions:
 
         self.make_action("Stop and Start All Services", self.logichub_stop_and_start_services_in_one_line)
 
+        self.make_action("Integration Name from Digest or Container Name", self.logichub_integration_name_from_digest_or_container_name)
+
         self.add_menu_section("File System Paths", text_color="blue", menu_depth=1)
 
         self.make_action("lh-monitoring repo", self.shell_lh_host_path_to_lh_monitoring_repo)
@@ -1767,6 +1769,19 @@ check_recent_user_activity
     def logichub_stop_and_start_services_in_one_line(self):
         self.write_clipboard(
             "sudo /opt/logichub/scripts/stop_logichub_sw.sh ; sleep 5 ; sudo /opt/logichub/scripts/start_logichub_sw.sh")
+
+    def logichub_integration_name_from_digest_or_container_name(self):
+        """ Integration Name from Digest or Container Name """
+        _input = self.read_clipboard(lower=True)
+        digest_ids = []
+        for line in re.split(r'[\r\n]+', _input):
+            if 'lhub-managed-custom-python-' in line:
+                digest_ids.append(re.sub(r'^.*lhub-managed-custom-python-(\w+)[\s\S]*', r'\1', line))
+            elif '-' not in line:
+                digest_ids.append(line.strip())
+        digest_id_str = "', '".join(digest_ids)
+        self.write_clipboard(
+            f'docker exec postgres psql --u daemon lh -t -c "select integration_name, active_digest from custom_integration_meta where lower(active_digest) in (\'{digest_id_str}\')"')
 
     def logichub_shell_own_instance_version(self):
         self.write_clipboard(
