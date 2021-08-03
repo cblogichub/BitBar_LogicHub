@@ -204,12 +204,13 @@ run_backups() {
         docker cp "service:/opt/docker/resources/integrations/${x}" "${descriptor_dir}" || { print_color -red "ERROR: Failure during file copy; aborting...\n"; return; }
     done
 
-    print_color -h "Postgres Database"
-
-    new_file_db_dump="logichub_backup_data_dump.psql"
-    print_color --nocolorbold "Generating: ${new_file_db_dump}"
-    docker exec -it postgres pg_dump --username daemon -d lh > "${new_dir}/${new_file_db_dump}"
-    ls -l "${new_dir}/${new_file_db_dump}"
+# 2021-08-02: no longer relevant, since the LogicHub backup script is more thorough now, and this workaround only backs up one of the necessary databases anyway.
+#    print_color -h "Postgres Database"
+#
+#    new_file_db_dump="logichub_backup_data_dump.psql"
+#    print_color --nocolorbold "Generating: ${new_file_db_dump}"
+#    docker exec -it postgres pg_dump --username daemon -d lh > "${new_dir}/${new_file_db_dump}"
+#    ls -l "${new_dir}/${new_file_db_dump}"
 
     new_file_lh_users="db-users.txt"
     print_color --nocolorbold  "\nGenerating: ${new_file_lh_users}"
