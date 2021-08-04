@@ -2508,6 +2508,7 @@ check_recent_user_activity
 </style>
 </head>
 """
+
         html_table += json2html.json2html.convert(
             json=json_loaded,
             table_attributes='class="test_table"'
