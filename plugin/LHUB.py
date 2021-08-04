@@ -2505,10 +2505,6 @@ check_recent_user_activity
     border: 2px solid black;
 }
 .test_table td { border: 2px solid black; }
-.sev1 { background-color: #ff8080; }
-.sev2 { background-color: #ffe0b3; }
-.sev3 { background-color: #ffff99; }
-.sev4 { background-color: #b1ff99; }
 </style>
 </head>
 """
