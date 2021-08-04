@@ -62,6 +62,12 @@ else:
 if not chromedriver:
     chrome_driver_error = "Chrome driver not found"
 
+json2table_error = False
+try:
+    import json2html
+except ModuleNotFoundError:
+    json2table_error = True
+
 # Global static variables
 user_config_file = "logichub_tools.ini"
 
@@ -781,6 +787,12 @@ class Actions:
         self.make_action("Fix (escaped strings to dicts/lists)", self.action_json_fix)
         self.make_action("Sort by keys and values (recursive)", self.action_json_sort)
 
+        if not json2table_error:
+            self.make_action("JSON to HTML Table (clipboard)", self.action_json_to_html)
+            self.make_action("JSON to HTML Table (open in browser)", self.action_json_to_html_as_file)
+        else:
+            self.make_action("JSON to HTML Table: install package json2html", None)
+
         self.print_in_menu("HTML")
         self.make_action("Open as a file", self.action_html_to_temp_file)
 
@@ -1055,8 +1067,11 @@ class Actions:
             output = f.read()
         self.write_clipboard(output)
 
-    def _clipboard_to_temp_file(self, file_ext):
-        _input = self.read_clipboard()
+    def _clipboard_to_temp_file(self, file_ext, static_text=None):
+        if static_text:
+            _input = static_text
+        else:
+            _input = self.read_clipboard()
         return Reusable.write_text_to_temp_file(_input, file_ext, file_ext + "_text")
 
     def make_upgrade_command(self, version: str = None):
@@ -2473,6 +2488,42 @@ check_recent_user_activity
     def action_json_sort(self):
         """ JSON Sort """
         self._process_json_clipboard(sort_output=True, compact_spacing=True, format_auto=True)
+
+    def action_json_to_html(self, as_file=False):
+        json_loaded = self._json_notify_and_exit_when_invalid()
+        html_table = r"""<head>
+<style>
+.test_table {
+    border: 2px solid black;
+}
+.test_table table, th, tr, td {
+    margin:0;
+    padding:1px;
+}
+.test_table th {
+    background-color: #f0f1f2;
+    border: 2px solid black;
+}
+.test_table td { border: 2px solid black; }
+.sev1 { background-color: #ff8080; }
+.sev2 { background-color: #ffe0b3; }
+.sev3 { background-color: #ffff99; }
+.sev4 { background-color: #b1ff99; }
+</style>
+</head>
+"""
+        html_table += json2html.json2html.convert(
+            json=json_loaded,
+            table_attributes='class="test_table"'
+        )
+        if as_file:
+            html_file = self._clipboard_to_temp_file(file_ext="html", static_text=html_table)
+            _ = subprocess.run(["open", html_file])
+        else:
+            self.write_clipboard(html_table)
+
+    def action_json_to_html_as_file(self):
+        self.action_json_to_html(as_file=True)
 
     ############################################################################
     # TECH -> HTML
