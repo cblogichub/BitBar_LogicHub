@@ -2425,6 +2425,8 @@ check_recent_user_activity
             _input = manual_input
         else:
             _input = self.read_clipboard()
+        if _input.endswith('%'):
+            _input = _input[:-1]
         try:
             new = json.loads(_input, strict=False)
             for _try in range(5):
