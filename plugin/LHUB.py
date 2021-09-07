@@ -626,9 +626,11 @@ class Actions:
         self.make_action("addExecutionMetadata", self.logichub_operator_start_addExecutionMetadata)
         self.make_action("dropColumns", self.logichub_operator_start_dropColumns)
         self.make_action("ensureTableHasColumns", self.logichub_operator_start_ensureTableHasColumns)
+        self.make_action("fieldnamesHistogram", self.logichub_operator_start_fieldnamesHistogram)
         self.make_action("fetchAlerts (with parent table)", self.logichub_operator_start_fetchAlerts_with_table)
         self.make_action("fetchAlerts (without parent table)", self.logichub_operator_start_fetchAlerts_no_table)
         self.make_action("forceFail", self.logichub_operator_start_forceFail)
+        self.make_action("getFieldnames", self.logichub_operator_start_getFieldnames)
         self.make_action("jsonToColumns", self.logichub_operator_start_jsonToColumns, menu_depth=1)
         self.make_action("unionAll", self.logichub_operator_start_unionAll, menu_depth=1)
         self.make_action("waitForMillis", self.logichub_operator_start_waitForMillis)
@@ -1621,6 +1623,11 @@ class Actions:
         table_name = self.read_clipboard_for_table_name()
         self.write_clipboard(f'ensureTableHasColumns({table_name}, "COLUMN_NAME")')
 
+    def logichub_operator_start_fieldnamesHistogram(self):
+        """Operator Start: fieldnamesHistogram"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'fieldnamesHistogram({table_name})')
+
     def logichub_operator_start_fetchAlerts_with_table(self, include_table_name=True):
         table_reference = ''
         if include_table_name:
@@ -1633,6 +1640,11 @@ class Actions:
     def logichub_operator_start_forceFail(self):
         table_name = self.read_clipboard_for_table_name()
         self.write_clipboard(f'forceFail({table_name}, "integ_error")')
+
+    def logichub_operator_start_getFieldnames(self):
+        """Operator Start: getFieldnames"""
+        table_name = self.read_clipboard_for_table_name()
+        self.write_clipboard(f'getFieldnames({table_name})')
 
     def logichub_operator_start_jsonToColumns(self):
         table_name = self.read_clipboard_for_table_name()
