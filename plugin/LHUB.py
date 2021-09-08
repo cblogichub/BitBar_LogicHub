@@ -1595,15 +1595,34 @@ class Actions:
 
             return data
 
+        def _final_sort(data):
+            if isinstance(data, dict):
+                new_dict = {}
+                for k in ['name']:
+                    if k in data.keys():
+                        new_dict[k] = data.pop(k)
+                new_dict.update(data)
+                return {k: _final_sort(v) for k, v in new_dict.items()}
+            elif isinstance(data, list):
+                return [_final_sort(s) for s in data]
+            else:
+                return data
+
         _input = self._json_notify_and_exit_when_invalid()
         if not _input:
             return
         _input = self._process_json_clipboard(sort_output=True, format_output=True, return_obj=True)
+
+        # First round of sanitizing
         _input = crawl(_input)
 
-        # _input = Reusable.sort_dict_by_values(_input)
-        # ToDo Try _sort_dicts_and_lists instead
-        self.write_clipboard(json.dumps(_input, indent=2))
+        # Sort results by keys and values
+        _input = self._sort_dicts_and_lists(_input)
+
+        # Custom final sorting
+        _input = _final_sort(_input)
+        
+        self.write_clipboard(json.dumps(_input, ensure_ascii=False, indent=2))
 
     # ---- Operators: General ----
 
