@@ -796,7 +796,7 @@ class Actions:
             self.make_action("JSON to HTML Table: install package json2html", None)
 
         self.print_in_menu("HTML")
-        self.make_action("Open as a file", self.action_html_to_temp_file)
+        self.make_action("Open as a file", self.action_html_to_temp_file, keyboard_shortcut="CmdOrCtrl+shift+h")
 
         if not chrome_driver_error:
             self.make_action("Generate screenshot", self.action_html_to_screenshot)
