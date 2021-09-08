@@ -1619,9 +1619,13 @@ class Actions:
         # Sort results by keys and values
         _input = self._sort_dicts_and_lists(_input)
 
-        # Custom final sorting
+        # Custom final overall sorting
         _input = _final_sort(_input)
-        
+
+        # One more sort, this time ONLY for the list of nodes to be ordered by node name
+        for n in range(len(_input['flows'])):
+            _input['flows'][n]['nodes'] = sorted(_input['flows'][n]['nodes'], key=lambda i: i['name'])
+
         self.write_clipboard(json.dumps(_input, ensure_ascii=False, indent=2))
 
     # ---- Operators: General ----
