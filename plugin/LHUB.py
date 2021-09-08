@@ -1328,30 +1328,28 @@ class Actions:
         self.write_clipboard(f'SELECT {_columns_formatted}\nFROM ')
 
     def logichub_sql_start_from_tabs_distinct(self):
-        _input = self.read_clipboard()
-        _columns = _input.split()
-        _columns_formatted = ", ".join(_columns)
+        _columns_formatted = self._split_tabs_to_columns(update_clipboard=False)
         self.write_clipboard(f'SELECT DISTINCT {_columns_formatted}\nFROM ')
 
     def logichub_tabs_to_columns_left_join(self):
-        _input = self.read_clipboard()
-        _columns = _input.split()
+        _input = self._split_tabs_to_columns(update_clipboard=False)
+        _columns = re.split(', *', _input)
         self.write_clipboard("L.{}".format(", L.".join(_columns)))
 
     def logichub_tabs_to_columns_right_join(self):
-        _input = self.read_clipboard()
-        _columns = _input.split()
+        _input = self._split_tabs_to_columns(update_clipboard=False)
+        _columns = re.split(', *', _input)
         self.write_clipboard("R.{}".format(", R.".join(_columns)))
 
     def logichub_sql_start_from_tabs_join_left(self):
-        _input = self.read_clipboard()
-        _columns = _input.split()
+        _input = self._split_tabs_to_columns(update_clipboard=False)
+        _columns = re.split(', *', _input)
         _columns_formatted = "L.{}".format(", L.".join(_columns))
         self.write_clipboard(f'SELECT {_columns_formatted}\nFROM xxxx L\nLEFT JOIN xxxx R\nON L.xxxx = R.xxxx')
 
     def logichub_sql_start_from_tabs_join_right(self):
-        _input = self.read_clipboard()
-        _columns = _input.split()
+        _input = self._split_tabs_to_columns(update_clipboard=False)
+        _columns = re.split(', *', _input)
         _columns_formatted = "R.{}".format(", R.".join(_columns))
         self.write_clipboard(f'SELECT {_columns_formatted}\nFROM xxxx L\nLEFT JOIN xxxx R\nON L.xxxx = R.xxxx')
 
