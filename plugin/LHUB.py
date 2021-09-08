@@ -1571,6 +1571,9 @@ class Actions:
                             data[k] = ["" for v in data[k]]
                         elif k in list_fields_to_empty:
                             data[k] = []
+                        # If the key is "inputs" and the value is a list of strings, then replace each string with "..." so it doesn't end up a list of unique node IDs
+                        if k == "inputs" and data[k] and isinstance(data[k][0], str):
+                            data[k] = ["..." for v in data[k]]
                 # crawl through values of every k in the dict
                 data = {k: crawl(v) for k, v in data.items()}
 
