@@ -855,8 +855,8 @@ class Actions:
 
         self.add_menu_section("Time", text_color="blue", menu_depth=1)
 
-        self.make_action("Convert epoch time as local time (from clipboard)", self.epoch_time_as_local_time_convert)
-        self.make_action("Show epoch time as local time (leave clipboard)", self.action_epoch_time_to_str, action_id="epoch_time_as_local_time", alternate=True)
+        self.make_action("Show epoch time as local time (leave clipboard)", self.action_epoch_time_to_str, action_id="epoch_time_as_local_time")
+        self.make_action("Convert epoch time as local time (update clipboard)", self.epoch_time_as_local_time_convert, alternate=True)
 
         # ------------ Menu Section: Networking ------------ #
 
