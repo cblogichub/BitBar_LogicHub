@@ -599,6 +599,8 @@ class Actions:
         self.make_action("SQL Start from spaced strings (join, right columns only)",
                          self.logichub_tabs_to_columns_right_join, alternate=True)
 
+        self.make_action("Clipboard to LH-friendly static string", self.action_logichub_clipboard_to_static_string)
+
         self.add_menu_section("Spark Commands (from clipboard)", text_color="blue", menu_depth=1)
 
         # Full version of "from_json" action, which includes all nested dicts and lists
@@ -1365,6 +1367,17 @@ class Actions:
         _input = self._split_tabs_to_columns(update_clipboard=False)
         _columns = re.split(', *', _input)
         self.write_clipboard("R.{}".format(", R.".join(_columns)))
+
+    def action_logichub_clipboard_to_static_string(self):
+        _input = self.read_clipboard(trim_input=False)
+        # Sanitize escapes
+        _input = re.sub(r'\\', r'\\\\', _input)
+        # Sanitize single quotes
+        # _input = re.sub("'", r"\\'", _input)
+        _input = _input.replace("'", "\\'")
+        # Sanitize newlines
+        _input = _input.replace('\n', '\\n')
+        self.write_clipboard(f"'{_input}'")
 
     def logichub_sql_start_from_tabs_join_left(self):
         _input = self._split_tabs_to_columns(update_clipboard=False)
