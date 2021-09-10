@@ -580,6 +580,13 @@ class Actions:
                          self.logichub_sql_start_with_integ_error_check)
         self.make_action("SQL New with Integration Error Check (without table name)",
                          self.logichub_sql_start_with_integ_error_check_without_table_name, alternate=True)
+
+        # ToDo Added on 2021-09-09: delete after a while if no one is using this
+        self.make_action("SQL New with Integration Error Check - OLD VERSION",
+                         self.logichub_sql_start_with_integ_error_check_old_v1)
+        self.make_action("SQL New with Integration Error Check - OLD VERSION (without table name)",
+                         self.logichub_sql_start_with_integ_error_check_without_table_name_old_v1, alternate=True)
+
         self.make_action("SQL Start from spaced strings", self.logichub_sql_start_from_tabs)
         self.make_action("SQL Start from spaced strings (sorted)", self.logichub_sql_start_from_tabs_sorted)
         self.make_action("SQL Start from spaced strings (distinct)", self.logichub_sql_start_from_tabs_distinct)
@@ -615,6 +622,7 @@ class Actions:
         self.make_action("BETA: Reformat DSL command [pretty print SQL]", self.logichub_dsl_reformat_pretty, keyboard_shortcut="CmdOrCtrl+OptionOrAlt+d")
 
         self.make_action("Integration Error Check AND forceFail (from table name)", self.logichub_dsl_integ_error_check_and_force_fail)
+        self.make_action("Integration Error Check AND forceFail - OLD VERSION", self.logichub_dsl_integ_error_check_and_force_fail_v1, alternate=True)
         self.make_action("Add batch info and drop temporary column (from table name)", self.logichub_dsl_batch_info)
 
         # ------------ Menu Sub-section: LQL operators ------------ #
@@ -664,7 +672,7 @@ class Actions:
         self.make_action("Recent UI user activity", self.logichub_check_recent_user_activity_v2)
 
         # ToDo Delete this and its method once confirmed it's no longer needed.
-        self.make_action("Recent UI user activity (old version)", self.logichub_check_recent_user_activity_v1, alternate=True)
+        self.make_action("Recent UI user activity (OLD VERSION)", self.logichub_check_recent_user_activity_v1, alternate=True)
 
         self.make_action("Stop and Start All Services", self.logichub_stop_and_start_services_in_one_line)
 
@@ -1221,11 +1229,22 @@ class Actions:
         self.write_clipboard(f'SELECT * FROM ')
 
     @staticmethod
-    def _logichub_integ_error_sql(table_name=None):
-        sql_string = """SELECT CASE\n  WHEN exit_code = 241 THEN 'Integration failed: timed out before completing'\n  WHEN exit_code = 0 AND GET_JSON_OBJECT(result, "$.has_error") = false THEN ''\n  WHEN COALESCEEMPTY(GET_JSON_OBJECT(result, "$.error"), stderr) != '' THEN PRINTF('Integration failed: %s', COALESCEEMPTY(GET_JSON_OBJECT(result, "$.error"), stderr))\n  ELSE 'Integration appears to have failed: no error provided, but unexpected result: ' || result\nEND AS integ_error,\n*\nFROM """
+    def _logichub_integ_error_sql(table_name=None, version=2):
+        if version == 1:
+            # Original version
+            sql_string = """SELECT CASE\n  WHEN exit_code = 0 AND GET_JSON_OBJECT(result, "$.has_error") = false THEN ''\n  WHEN exit_code = 241 THEN 'Integration failed: timed out before completing'\n  WHEN COALESCEEMPTY(GET_JSON_OBJECT(result, "$.error"), stderr) != '' THEN PRINTF('Integration failed: %s', COALESCEEMPTY(GET_JSON_OBJECT(result, "$.error"), stderr))\n  ELSE 'Integration appears to have failed: no error provided, but unexpected result: ' || result\nEND AS integ_error,\n*\nFROM ___table_name___\nORDER BY integ_error DESC"""
+        else:
+            sql_string = """SELECT REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(CASE\n  WHEN exit_code = 0 AND GET_JSON_OBJECT(result, '$.has_error') = FALSE THEN ''\n  WHEN exit_code = 241 THEN 'timed out before completing'\n  WHEN COALESCEEMPTY(GET_JSON_OBJECT(result, '$.error'), stderr) != '' THEN COALESCEEMPTY(GET_JSON_OBJECT(result, '$.error'), stderr)\n  ELSE 'no error provided, but unexpected result: ' || result\nEND,\n  '[\\\\s\\\\S]*Traceback[\\\\s\\\\S]+\\n(?: *File .+\\n.+\\n)+', ''),\n  '\\n.*killed because of Timeout.*', ''),\n  '^(?=.)', 'Integration failed: ') AS integ_error,\n*\nFROM ___table_name___\nORDER BY integ_error DESC"""
         if table_name:
-            sql_string += table_name
+            sql_string = sql_string.replace('___table_name___', table_name)
         return sql_string
+
+    def logichub_sql_start_with_integ_error_check_old_v1(self):
+        _input = self.read_clipboard_for_table_name()
+        self.write_clipboard(self._logichub_integ_error_sql(_input, version=1))
+
+    def logichub_sql_start_with_integ_error_check_without_table_name_old_v1(self):
+        self.write_clipboard(self._logichub_integ_error_sql(version=1))
 
     def logichub_sql_start_with_integ_error_check(self):
         _input = self.read_clipboard_for_table_name()
@@ -1293,6 +1312,12 @@ class Actions:
         if not new_dsl_string:
             self.display_notification_error('An error occurred: new DSL string came out empty', title=error_title)
         self.write_clipboard(new_dsl_string[0:-4])
+
+    def logichub_dsl_integ_error_check_and_force_fail_v1(self):
+        _input = self.read_clipboard_for_table_name()
+        first_table = self._logichub_integ_error_sql(_input, version=1)
+        self.write_clipboard(
+            f"[{first_table}] as error_check\n| [forceFail(error_check, \"integ_error\")] as fail_if_error\n| [dropColumns(fail_if_error, \"integ_error\", \"exit_code\", \"stdout\", \"stderr\")] as final_output")
 
     def logichub_dsl_integ_error_check_and_force_fail(self):
         _input = self.read_clipboard_for_table_name()
