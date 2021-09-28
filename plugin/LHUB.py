@@ -1377,6 +1377,8 @@ class Actions:
         _input = _input.replace("'", "\\'")
         # Sanitize newlines
         _input = _input.replace('\n', '\\n')
+        # Escape tick marks
+        _input = _input.replace('`', '\\`')
         self.write_clipboard(f"'{_input}'")
 
     def logichub_sql_start_from_tabs_join_left(self):
