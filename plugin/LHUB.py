@@ -554,8 +554,8 @@ class Actions:
         #   LQL to convert XML to JSON: java_method('org.json.XML', 'toJSONObject', test_xml)
         #   Case management custom fields
 
-        self.make_action("(Beta) Pretty Print SQL", self.logichub_pretty_print_sql, keyboard_shortcut="CmdOrCtrl+shift+p")
-        self.make_action("(Beta) Pretty Print SQL options", action=None, alternate=True)
+        self.make_action("Pretty Print SQL", self.logichub_pretty_print_sql, keyboard_shortcut="CmdOrCtrl+shift+p")
+        self.make_action("Pretty Print SQL options", action=None, alternate=True)
         self.make_action("Wrapped at 80 characters", self.logichub_pretty_print_sql_wrapped, menu_depth=2)
         self.make_action("Compact", self.logichub_pretty_print_sql_compact, menu_depth=2)
 
@@ -620,7 +620,7 @@ class Actions:
         self.add_menu_section("DSL Commands", text_color="blue", menu_depth=1)
 
         # ToDo Remove "BETA" prefix after this has been used a while
-        self.make_action("BETA: Reformat DSL command [simple]", self.logichub_dsl_reformat_simple, keyboard_shortcut="CmdOrCtrl+shift+d")
+        self.make_action("Reformat DSL command [simple]", self.logichub_dsl_reformat_simple, keyboard_shortcut="CmdOrCtrl+shift+d")
         self.make_action("BETA: Reformat DSL command [pretty print SQL]", self.logichub_dsl_reformat_pretty, keyboard_shortcut="CmdOrCtrl+OptionOrAlt+d")
 
         self.make_action("Integration Error Check AND forceFail (from table name)", self.logichub_dsl_integ_error_check_and_force_fail)
