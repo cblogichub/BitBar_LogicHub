@@ -1586,25 +1586,33 @@ class Actions:
     def sanitize_logichub_json(self):
         def crawl(data):
             if isinstance(data, dict):
-                number_fields_to_sanitize = ["integrationInstanceId"]
-                fields_to_delete = ["x", "y"]
+                number_fields_to_sanitize = ["integrationInstanceId", "id"]
+                fields_to_delete = [
+                    "x", "y", "__lh_is_default_connection", "__lh_use_agent", "userPreference",
+                ]
                 # string_fields_to_sanitize = ["id", "nodeId", "flowId", "oldId"]
                 # If a value is a string, treat as a regex pattern.
                 string_fields_to_sanitize = {
                     "id": None, "nodeId": None, "flowId": None, "oldId": None,
                     "__lh_is_default_connection": None, "currentModified": None,
-                    "table": "^list_data_.*",
+                    "baselineNode": None,
+                    "table": "list_data_",
+                    "flow": "flow-",
+                    "baseline": "stream-",
+                    "flowNodeReferenceId": "flowNodeRef-",
                 }
                 list_fields_to_sanitize = ["executionDependsOn"]
                 list_fields_to_empty = ["warnings"]
+                lql_fields = ["templateLQL", "lql"]
                 for k in list(data.keys()):
+                    if k in lql_fields and isinstance(data[k], str):
+                        data[k] = re.sub(r'^`|((?<!\\)`|\n)+$', '', data[k])
                     if k in fields_to_delete:
                         del data[k]
-                    elif k in number_fields_to_sanitize:
+                    elif isinstance(data[k], Number) and k in number_fields_to_sanitize:
                         data[k] = 0
                     elif isinstance(data[k], str):
-                        if k in string_fields_to_sanitize:
-                            if not string_fields_to_sanitize[k] or re.match(string_fields_to_sanitize[k], data[k]):
+                        if k.endswith('**connection') or k in string_fields_to_sanitize and (not string_fields_to_sanitize[k] or re.match(string_fields_to_sanitize[k], data[k])):
                                 data[k] = "..."
                     elif isinstance(data[k], list):
                         if k in list_fields_to_sanitize:
